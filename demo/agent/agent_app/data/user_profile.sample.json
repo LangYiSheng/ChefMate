@@ -1,0 +1,8 @@
+{
+  "flavor_preferences": ["清淡", "下饭"],
+  "dietary_restrictions": [],
+  "health_goal": "均衡",
+  "cooking_skill_level": "新手",
+  "max_cook_time": 25,
+  "available_tools": ["炒锅", "汤锅", "电饭煲"]
+}

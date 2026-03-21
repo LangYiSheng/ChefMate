@@ -1,0 +1,156 @@
+[
+  {
+    "name": "番茄炒蛋",
+    "aliases": ["西红柿炒鸡蛋", "番茄鸡蛋"],
+    "summary": "经典快手家常菜，酸甜开胃又下饭。",
+    "estimated_minutes": 15,
+    "difficulty": "简单",
+    "servings": 2,
+    "flavor_tags": ["清淡", "酸甜", "下饭"],
+    "health_tags": ["均衡", "低油"],
+    "available_tools": ["炒锅"],
+    "ingredients": [
+      { "name": "番茄", "amount": "2 个", "purpose": "主体风味" },
+      { "name": "鸡蛋", "amount": "3 个", "purpose": "主体蛋白" },
+      { "name": "葱花", "amount": "少许", "optional": true, "purpose": "提香" },
+      { "name": "盐", "amount": "1 小勺", "purpose": "基础调味" },
+      { "name": "食用油", "amount": "适量", "purpose": "煎炒" }
+    ],
+    "steps": [
+      "番茄切块，鸡蛋打散，加一点点盐拌匀。",
+      "热锅下油，先把鸡蛋炒到刚凝固，盛出来备用。",
+      "锅里补一点油，下番茄翻炒到出汁。",
+      "把鸡蛋回锅，和番茄一起翻匀，再按口味补一点盐。",
+      "试味后撒葱花，翻两下就可以出锅。"
+    ],
+    "tips": ["番茄要炒出汁再回鸡蛋，成菜会更顺口。"]
+  },
+  {
+    "name": "青椒土豆丝",
+    "aliases": ["土豆丝"],
+    "summary": "家常快炒，清爽下饭，材料也比较常见。",
+    "estimated_minutes": 20,
+    "difficulty": "简单",
+    "servings": 2,
+    "flavor_tags": ["清淡", "下饭"],
+    "health_tags": ["低油", "均衡"],
+    "available_tools": ["炒锅"],
+    "ingredients": [
+      { "name": "土豆", "amount": "2 个", "purpose": "主料" },
+      { "name": "青椒", "amount": "1 个", "purpose": "配色和清香" },
+      { "name": "大蒜", "amount": "2 瓣", "optional": true, "purpose": "爆香" },
+      { "name": "盐", "amount": "1 小勺", "purpose": "基础调味" },
+      { "name": "食用油", "amount": "适量", "purpose": "煎炒" }
+    ],
+    "steps": [
+      "土豆去皮切丝，冲洗掉多余淀粉；青椒切丝。",
+      "热锅下油，先下蒜末爆香。",
+      "倒入土豆丝快速翻炒 2 到 3 分钟。",
+      "加入青椒丝和盐，继续翻匀到断生。",
+      "确认土豆丝刚熟不软烂，就可以出锅。"
+    ],
+    "tips": ["土豆丝提前冲水，炒出来会更脆。"]
+  },
+  {
+    "name": "蒜蓉生菜",
+    "aliases": ["炒生菜"],
+    "summary": "特别快手的清淡蔬菜菜，适合凑一顿晚饭。",
+    "estimated_minutes": 10,
+    "difficulty": "简单",
+    "servings": 2,
+    "flavor_tags": ["清淡"],
+    "health_tags": ["减脂", "低油"],
+    "available_tools": ["炒锅"],
+    "ingredients": [
+      { "name": "生菜", "amount": "1 颗", "purpose": "主料" },
+      { "name": "大蒜", "amount": "3 瓣", "purpose": "蒜香" },
+      { "name": "盐", "amount": "少许", "purpose": "基础调味" },
+      { "name": "食用油", "amount": "适量", "purpose": "快炒" }
+    ],
+    "steps": [
+      "生菜洗净沥水，大蒜切末。",
+      "热锅少油，下蒜末炒出香味。",
+      "倒入生菜快速翻炒。",
+      "加少许盐，炒到刚变软立刻关火出锅。"
+    ],
+    "tips": ["生菜不要炒太久，软得太厉害口感会塌。"]
+  },
+  {
+    "name": "可乐鸡翅",
+    "aliases": ["鸡翅", "可乐翅"],
+    "summary": "偏受欢迎的家常硬菜，甜咸口，成功率也不错。",
+    "estimated_minutes": 30,
+    "difficulty": "中等",
+    "servings": 2,
+    "flavor_tags": ["下饭", "甜咸"],
+    "health_tags": ["均衡"],
+    "available_tools": ["炒锅"],
+    "ingredients": [
+      { "name": "鸡翅中", "amount": "8 个", "purpose": "主料" },
+      { "name": "可乐", "amount": "1 罐", "purpose": "上色和风味" },
+      { "name": "生抽", "amount": "2 勺", "purpose": "基础咸鲜" },
+      { "name": "姜", "amount": "几片", "optional": true, "purpose": "去腥" },
+      { "name": "食用油", "amount": "少量", "purpose": "煎制" }
+    ],
+    "steps": [
+      "鸡翅表面划两刀，方便入味。",
+      "锅里少油，把鸡翅煎到两面微黄。",
+      "加入姜片、生抽和可乐，液体基本没过鸡翅。",
+      "中小火焖煮 15 分钟左右。",
+      "最后大火收汁到表面发亮，就可以出锅。"
+    ],
+    "tips": ["最后收汁要盯锅，避免糖分焦掉。"]
+  },
+  {
+    "name": "蛋炒饭",
+    "aliases": ["炒饭"],
+    "summary": "最适合消耗剩饭的快手方案，十几分钟就能吃上。",
+    "estimated_minutes": 12,
+    "difficulty": "简单",
+    "servings": 1,
+    "flavor_tags": ["下饭", "家常"],
+    "health_tags": ["均衡"],
+    "available_tools": ["炒锅"],
+    "ingredients": [
+      { "name": "米饭", "amount": "1 大碗", "purpose": "主料" },
+      { "name": "鸡蛋", "amount": "2 个", "purpose": "蛋白和香气" },
+      { "name": "葱花", "amount": "少许", "optional": true, "purpose": "提香" },
+      { "name": "盐", "amount": "少许", "purpose": "基础调味" },
+      { "name": "食用油", "amount": "适量", "purpose": "煎炒" }
+    ],
+    "steps": [
+      "鸡蛋打散，米饭提前拨松。",
+      "热锅下油，先把鸡蛋炒散。",
+      "倒入米饭快速压散翻炒。",
+      "加盐调味，继续炒到饭粒分明。",
+      "撒葱花翻匀后出锅。"
+    ],
+    "tips": ["剩饭比新煮米饭更适合炒，颗粒更分明。"]
+  },
+  {
+    "name": "番茄鸡蛋面",
+    "aliases": ["西红柿鸡蛋面", "番茄面"],
+    "summary": "一锅就能解决的省事晚饭，适合时间紧的时候。",
+    "estimated_minutes": 18,
+    "difficulty": "简单",
+    "servings": 1,
+    "flavor_tags": ["清淡", "酸甜"],
+    "health_tags": ["均衡"],
+    "available_tools": ["汤锅"],
+    "ingredients": [
+      { "name": "番茄", "amount": "1 到 2 个", "purpose": "汤底风味" },
+      { "name": "鸡蛋", "amount": "2 个", "purpose": "蛋白和口感" },
+      { "name": "挂面", "amount": "1 把", "purpose": "主食" },
+      { "name": "盐", "amount": "少许", "purpose": "基础调味" },
+      { "name": "食用油", "amount": "少许", "purpose": "炒番茄" }
+    ],
+    "steps": [
+      "番茄切块，鸡蛋打散。",
+      "锅里少油，先把鸡蛋炒散盛出。",
+      "下番茄炒出汁后加水烧开。",
+      "放入挂面煮到快熟，再把鸡蛋回锅。",
+      "加盐调味，面熟后关火盛出。"
+    ],
+    "tips": ["如果你喜欢汤更浓，可以多炒一会儿番茄。"]
+  }
+]

@@ -1,6 +1,23 @@
 [project]
 name = "agent"
 version = "0.1.0"
-description = "Add your description here"
-requires-python = ">=3.13"
-dependencies = []
+description = "ChefMate command-line agent demo powered by LangChain."
+requires-python = ">=3.12"
+dependencies = [
+    "langchain>=1.2.13",
+    "langchain-openai>=1.1.11",
+    "python-dotenv>=1.0.1",
+]
+
+[project.scripts]
+chefmate-agent = "agent_app.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.package-data]
+agent_app = ["data/*.json"]
+
+[tool.setuptools.packages.find]
+include = ["agent_app*"]
