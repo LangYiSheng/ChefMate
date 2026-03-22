@@ -2,3 +2,6 @@
 .venv
 .env
 __pycache__
+
+data/recipe_origin/dishes
+data/recipe_origin/processor/workspace

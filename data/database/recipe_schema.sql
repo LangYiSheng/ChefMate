@@ -1,8 +1,8 @@
-CREATE DATABASE IF NOT EXISTS chefmate_data
-  DEFAULT CHARACTER SET utf8mb4
-  DEFAULT COLLATE utf8mb4_unicode_ci;
+-- CREATE DATABASE IF NOT EXISTS chefmate
+--   DEFAULT CHARACTER SET utf8mb4
+--   DEFAULT COLLATE utf8mb4_unicode_ci;
 
-USE chefmate_data;
+USE chefmate;
 
 SET NAMES utf8mb4;
 
@@ -16,7 +16,7 @@ DROP TABLE IF EXISTS recipe;
 CREATE TABLE recipe (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '菜谱主键',
     name VARCHAR(128) NOT NULL COMMENT '菜品名',
-    aliases_json JSON NULL COMMENT '菜品别名列表',
+    image_path VARCHAR(255) NULL COMMENT '菜品图片路径',
     description TEXT NULL COMMENT '菜品描述',
     difficulty ENUM('简单', '中等', '困难') NOT NULL DEFAULT '简单' COMMENT '难度',
     estimated_minutes INT NOT NULL DEFAULT 15 COMMENT '预计制作时长（分钟）',
@@ -110,9 +110,8 @@ INSERT INTO recipe_tag_category (category_code, category_name, sort_order) VALUE
 ('method', '烹饪方式标签', 2),
 ('scene', '场景标签', 3),
 ('health', '健康标签', 4),
-('difficulty', '难度标签', 5),
-('time', '时间标签', 6),
-('tool', '厨具标签', 7);
+('time', '时间标签', 5),
+('tool', '厨具标签', 6);
 
 INSERT INTO recipe_tag (category_id, bit_position, tag_code, tag_name, sort_order)
 SELECT c.id, t.bit_position, t.tag_code, t.tag_name, t.sort_order
@@ -125,7 +124,14 @@ JOIN (
     UNION ALL SELECT 'flavor', 4, 'flavor_spicy', '香辣', 5
     UNION ALL SELECT 'flavor', 5, 'flavor_mala', '麻辣', 6
     UNION ALL SELECT 'flavor', 6, 'flavor_garlic', '蒜香', 7
-    UNION ALL SELECT 'flavor', 7, 'flavor_curry', '咖喱', 8
+    UNION ALL SELECT 'flavor', 7, 'flavor_scallion', '葱香', 8
+    UNION ALL SELECT 'flavor', 8, 'flavor_sauce', '酱香', 9
+    UNION ALL SELECT 'flavor', 9, 'flavor_cumin', '孜然', 10
+    UNION ALL SELECT 'flavor', 10, 'flavor_curry', '咖喱', 11
+    UNION ALL SELECT 'flavor', 11, 'flavor_creamy', '奶香', 12
+    UNION ALL SELECT 'flavor', 12, 'flavor_tomato', '茄汁', 13
+    UNION ALL SELECT 'flavor', 13, 'flavor_sweet_vinegar', '糖醋', 14
+    UNION ALL SELECT 'flavor', 14, 'flavor_yuxiang', '鱼香', 15
 
     UNION ALL SELECT 'method', 0, 'method_stir_fry', '炒', 1
     UNION ALL SELECT 'method', 1, 'method_pan_fry', '煎', 2
@@ -136,28 +142,38 @@ JOIN (
     UNION ALL SELECT 'method', 6, 'method_cold_mix', '凉拌', 7
     UNION ALL SELECT 'method', 7, 'method_bake', '烤', 8
     UNION ALL SELECT 'method', 8, 'method_deep_fry', '炸', 9
+    UNION ALL SELECT 'method', 9, 'method_marinate', '卤', 10
+    UNION ALL SELECT 'method', 10, 'method_casserole', '煲', 11
+    UNION ALL SELECT 'method', 11, 'method_braise_gravy', '烩', 12
+    UNION ALL SELECT 'method', 12, 'method_microwave', '微波', 13
+    UNION ALL SELECT 'method', 13, 'method_air_fryer', '空气炸锅', 14
 
     UNION ALL SELECT 'scene', 0, 'scene_quick', '快手', 1
     UNION ALL SELECT 'scene', 1, 'scene_home_style', '家常', 2
     UNION ALL SELECT 'scene', 2, 'scene_single_meal', '一人食', 3
     UNION ALL SELECT 'scene', 3, 'scene_with_rice', '下饭', 4
-    UNION ALL SELECT 'scene', 4, 'scene_dorm', '宿舍友好', 5
+    UNION ALL SELECT 'scene', 4, 'scene_breakfast', '早餐', 5
+    UNION ALL SELECT 'scene', 5, 'scene_lunch', '午餐', 6
+    UNION ALL SELECT 'scene', 6, 'scene_dinner', '晚餐', 7
+    UNION ALL SELECT 'scene', 7, 'scene_midnight', '夜宵', 8
+    UNION ALL SELECT 'scene', 8, 'scene_bento', '便当', 9
+    UNION ALL SELECT 'scene', 9, 'scene_guest', '宴客', 10
 
     UNION ALL SELECT 'health', 0, 'health_low_oil', '低油', 1
     UNION ALL SELECT 'health', 1, 'health_high_protein', '高蛋白', 2
     UNION ALL SELECT 'health', 2, 'health_fat_loss', '减脂友好', 3
     UNION ALL SELECT 'health', 3, 'health_light_diet', '清淡饮食', 4
     UNION ALL SELECT 'health', 4, 'health_vegetarian_friendly', '素食友好', 5
-
-    UNION ALL SELECT 'difficulty', 0, 'difficulty_easy', '简单', 1
-    UNION ALL SELECT 'difficulty', 1, 'difficulty_medium', '中等', 2
-    UNION ALL SELECT 'difficulty', 2, 'difficulty_hard', '困难', 3
+    UNION ALL SELECT 'health', 5, 'health_low_sugar', '低糖', 6
+    UNION ALL SELECT 'health', 6, 'health_low_salt', '低盐', 7
+    UNION ALL SELECT 'health', 7, 'health_high_fiber', '高纤维', 8
 
     UNION ALL SELECT 'time', 0, 'time_10m', '10分钟内', 1
     UNION ALL SELECT 'time', 1, 'time_10_20m', '10到20分钟', 2
     UNION ALL SELECT 'time', 2, 'time_20_30m', '20到30分钟', 3
     UNION ALL SELECT 'time', 3, 'time_30_60m', '30到60分钟', 4
-    UNION ALL SELECT 'time', 4, 'time_60m_plus', '60分钟以上', 5
+    UNION ALL SELECT 'time', 4, 'time_60_120m', '60到120分钟', 5
+    UNION ALL SELECT 'time', 5, 'time_120m_plus', '120分钟以上', 6
 
     UNION ALL SELECT 'tool', 0, 'tool_wok', '炒锅', 1
     UNION ALL SELECT 'tool', 1, 'tool_pot', '汤锅', 2
@@ -166,4 +182,8 @@ JOIN (
     UNION ALL SELECT 'tool', 4, 'tool_air_fryer', '空气炸锅', 5
     UNION ALL SELECT 'tool', 5, 'tool_oven', '烤箱', 6
     UNION ALL SELECT 'tool', 6, 'tool_microwave', '微波炉', 7
+    UNION ALL SELECT 'tool', 7, 'tool_casserole', '砂锅', 8
+    UNION ALL SELECT 'tool', 8, 'tool_pan', '平底锅', 9
+    UNION ALL SELECT 'tool', 9, 'tool_pressure_cooker', '高压锅', 10
+    UNION ALL SELECT 'tool', 10, 'tool_bread_machine', '面包机', 11
 ) t ON t.category_code = c.category_code;
