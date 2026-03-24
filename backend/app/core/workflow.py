@@ -2,7 +2,6 @@ from app.core.semantic_models import ConversationStage, SemanticQuery, WorkflowC
 from app.skills.cooking import cooking_skill
 from app.skills.preparation import preparation_skill
 from app.skills.recommendation import recommendation_skill
-from app.skills.vision import vision_skill
 
 
 class WorkflowOrchestrator:
@@ -16,13 +15,17 @@ class WorkflowOrchestrator:
         text = user_input.lower()
 
         if "图片" in user_input or "食材" in user_input:
-            detected = vision_skill.detect_placeholder()
-            recommendation = recommendation_skill.recommend_from_ingredients(detected)
             return WorkflowResult(
                 next_stage=ConversationStage.RECOMMEND,
-                semantic_query=SemanticQuery(raw_text=user_input, available_ingredients=detected),
-                user_facing_message="已根据现有食材生成候选菜品。",
-                card=WorkflowCard(card_type="recommendation", payload=recommendation),
+                semantic_query=semantic_query,
+                user_facing_message="如果你要根据现有食材推荐菜品，请上传一张摆放好的食材图片，我会先识别食材列表，再继续推荐。",
+                card=WorkflowCard(
+                    card_type="vision_upload_hint",
+                    payload={
+                        "endpoint": "/api/vision/ingredients/detect",
+                        "tip": "当前建议拍摄摆放出来的食材，不建议直接拍冰箱内部。",
+                    },
+                ),
             )
 
         if "做" in text or "吃" in text:
