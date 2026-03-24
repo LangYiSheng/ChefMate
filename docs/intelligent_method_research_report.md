@@ -55,7 +55,7 @@ ReAct 方法由 Yao 等人在 2022 年提出，核心思想是让模型在推理
 
 #### 2.3.2 为什么还要结合工作流编排
 
-仅靠自由式 agent 虽然灵活，但在工程上容易出现不可预测行为。Spring AI 官方文档和 2025 年 5 月的 Spring AI 1.0 GA 发布说明中都强调了工作流驱动模式的重要性：对于结构清晰的业务任务，链式、路由式和编排式工作流通常比完全自治代理更可控。
+仅靠自由式 agent 虽然灵活，但在工程上容易出现不可预测行为。LangGraph 官方文档明确强调，其核心价值在于构建可控、可恢复、具备状态管理能力的长流程智能体；对于结构清晰的业务任务，确定性工作流与智能节点结合，通常比完全自治代理更稳定。
 
 本项目的做饭任务正好具备这种特征：
 
@@ -69,6 +69,12 @@ ReAct 方法由 Yao 等人在 2022 年提出，核心思想是让模型在推理
 - **内层大模型通过 ReAct 决定具体工具使用**
 
 这种“工作流 + ReAct”的混合方式，在灵活性和稳定性之间更平衡。
+
+在工程实现上，推荐使用 `FastAPI + LangGraph + LangChain 组件` 的组合：
+
+- `FastAPI` 负责统一 HTTP 接口、流式响应、文件上传和任务状态查询
+- `LangGraph` 负责工作流编排、状态机和长任务恢复
+- `LangChain` 只作为 Prompt、模型与工具抽象层，而不是整个系统的总控制器
 
 ### 2.4 推荐方法选型
 
@@ -166,6 +172,26 @@ YOLO 方案适合本项目的原因包括：
 5. 结构化检索与大模型解释结合的混合推荐
 
 本项目并不追求“把所有最新技术都塞进去”，而是只吸收与任务强相关、并且工程上可落地的部分。
+
+### 2.8 智能体运行架构选择
+
+在系统落地形态上，本项目采用模块化单体智能体架构，而不是一开始拆成多个独立微服务。
+
+选择理由如下：
+
+- 当前课程项目更需要保证任务链闭环和开发效率
+- 推荐模块、图像识别模块和智能体编排都依赖 Python 生态，统一在一个后端中实现更利于调试
+- 若一开始拆成多个独立服务，会增加接口联调、状态同步和部署管理复杂度
+
+因此，当前建议的运行结构为：
+
+- 前端：Vue3
+- 后端：FastAPI
+- 智能体编排：LangGraph
+- 模型与工具抽象：LangChain 组件
+- 推荐、食材识别、备料检查、烹饪指导：以后端内部技能模块的方式集成
+
+这种方式属于“模块化单体”，内部保持清晰模块边界，后续若图像识别或推荐模块负载明显上升，再进一步服务化拆分。
 
 ## 3. 模型采用的训练数据
 
@@ -444,7 +470,7 @@ FoodSeg103 原本是分割数据集，而本项目若采用 YOLO 检测路线，
 | 任务 | 主方案 |
 | --- | --- |
 | 对话智能体 | 大模型 API + Prompt + ReAct + 工作流编排 |
-| 框架实现 | Spring AI |
+| 框架实现 | FastAPI + LangGraph + LangChain 组件 |
 | 推荐 | 长期画像与即时需求融合的结构化混合推荐 |
 | 排序方式 | 规则过滤 + 多因素打分 |
 | 图像识别 | YOLO 检测方案 |
@@ -489,12 +515,13 @@ FoodSeg103 原本是分割数据集，而本项目若采用 YOLO 检测路线，
 
 以下资料用于确认当前技术口径和数据集信息：
 
-- Spring AI 官方文档：
-  [Tool Calling](https://docs.spring.io/spring-ai/reference/api/tools.html)
-  [Chat Memory](https://docs.spring.io/spring-ai/reference/api/chat-memory.html)
-  [Building Effective Agents](https://docs.spring.io/spring-ai/reference/api/effective-agents.html)
-- Spring 官方博客：
-  [Spring AI 1.0 GA Released](https://spring.io/blog/2025/05/20/spring-ai-1-0-GA-released)
+- LangGraph 官方文档：
+  [LangGraph Overview](https://docs.langchain.com/oss/python/langgraph/overview)
+- LangChain 官方文档：
+  [LangChain Overview](https://docs.langchain.com/oss/python/langchain/overview)
+- FastAPI 官方文档：
+  [FastAPI Tutorial](https://fastapi.tiangolo.com/tutorial/)
+  [Background Tasks](https://fastapi.tiangolo.com/de/reference/background/)
 - Ultralytics 官方文档：
   [Ultralytics YOLO Docs](https://docs.ultralytics.com/)
 - HowToCook 仓库：

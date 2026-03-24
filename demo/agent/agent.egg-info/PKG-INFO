@@ -1,8 +1,0 @@
-Metadata-Version: 2.4
-Name: agent
-Version: 0.1.0
-Summary: ChefMate command-line agent demo powered by LangChain.
-Requires-Python: >=3.12
-Requires-Dist: langchain>=1.2.13
-Requires-Dist: langchain-openai>=1.1.11
-Requires-Dist: python-dotenv>=1.0.1

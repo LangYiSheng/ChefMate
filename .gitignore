@@ -5,3 +5,8 @@ __pycache__
 
 data/recipe_origin/dishes
 data/recipe_origin/processor/workspace
+
+# Python packaging
+*.egg-info/
+*.egg
+.eggs/

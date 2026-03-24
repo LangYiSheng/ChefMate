@@ -1,2 +1,0 @@
-[console_scripts]
-chefmate-agent = agent_app.cli:main
