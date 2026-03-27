@@ -6,6 +6,15 @@ __pycache__
 data/recipe_origin/dishes
 data/recipe_origin/processor/workspace
 
+# ML training workspace
+ml/.venv/
+ml/.idea/
+ml/__pycache__/
+ml/vision/datasets/raw/
+ml/vision/datasets/processed/
+ml/vision/experiments/
+ml/vision/weights/
+
 # Python packaging
 *.egg-info/
 *.egg

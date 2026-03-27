@@ -1,0 +1,20 @@
+# YOLO 数据集配置示例
+# 请将 path 修改为相对于当前 yaml 文件的训练数据目录
+# 如果使用 scripts/prepare_foodseg103.py 生成数据，这个文件通常不需要手动维护
+
+path: ../datasets/processed/ingredient_detection
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: 番茄
+  1: 鸡蛋
+  2: 葱
+  3: 土豆
+  4: 洋葱
+  5: 黄瓜
+  6: 胡萝卜
+  7: 青椒
+  8: 茄子
+  9: 蘑菇

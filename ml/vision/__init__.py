@@ -1,0 +1,2 @@
+"""ChefMate vision training package."""
+

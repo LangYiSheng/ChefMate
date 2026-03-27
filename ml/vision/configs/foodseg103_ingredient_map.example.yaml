@@ -1,0 +1,72 @@
+# FoodSeg103 -> 项目训练类别映射
+# target_name 是训练输出类别名
+# db_name 是后续尽量对齐数据库与推荐系统的标准食材名
+# source_ids 是 FoodSeg103 中要合并进该目标类别的原始类别 id
+
+classes:
+  - target_name: 鸡蛋
+    db_name: 鸡蛋
+    source_ids: [24]
+  - target_name: 番茄
+    db_name: 番茄
+    source_ids: [73]
+  - target_name: 葱
+    db_name: 葱
+    source_ids: [76]
+  - target_name: 土豆
+    db_name: 土豆
+    source_ids: [70]
+  - target_name: 洋葱
+    db_name: 洋葱
+    source_ids: [93]
+  - target_name: 黄瓜
+    db_name: 黄瓜
+    source_ids: [82]
+  - target_name: 胡萝卜
+    db_name: 胡萝卜
+    source_ids: [84]
+  - target_name: 青椒
+    db_name: 青椒
+    source_ids: [94]
+  - target_name: 茄子
+    db_name: 茄子
+    source_ids: [69]
+  - target_name: 大蒜
+    db_name: 大蒜
+    source_ids: [71]
+  - target_name: 姜
+    db_name: 姜
+    source_ids: [78]
+  - target_name: 花菜
+    db_name: 花菜
+    source_ids: [72]
+  - target_name: 生菜
+    db_name: 生菜
+    source_ids: [80]
+  - target_name: 包菜
+    db_name: 包菜
+    source_ids: [91]
+  - target_name: 豆腐
+    db_name: 豆腐
+    source_ids: [68]
+  - target_name: 米饭
+    db_name: 米饭
+    source_ids: [66]
+  - target_name: 香菜
+    db_name: 香菜
+    source_ids: [89]
+  - target_name: 芹菜
+    db_name: 芹菜
+    source_ids: [88]
+  - target_name: 豆芽
+    db_name: 豆芽
+    source_ids: [92]
+  - target_name: 豆角
+    db_name: 豆角
+    source_ids: [95, 96]
+  - target_name: 香菇
+    db_name: 香菇
+    source_ids: [98]
+  - target_name: 金针菇
+    db_name: 金针菇
+    source_ids: [99]

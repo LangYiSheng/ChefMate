@@ -1,0 +1,19 @@
+[project]
+name = "chefmate-ml"
+version = "0.1.0"
+description = "ChefMate machine learning workspace"
+requires-python = ">=3.10"
+dependencies = [
+  "datasets>=3.2.0",
+  "ultralytics>=8.3.0",
+  "pillow>=10.4.0",
+  "numpy>=2.0.0",
+  "python-dotenv>=1.0.1",
+  "pyyaml>=6.0.2",
+  "tqdm>=4.66.0",
+  "onnx>=1.20.1",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"

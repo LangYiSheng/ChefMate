@@ -1,0 +1,314 @@
+labels:
+  - id: 0
+    english: background
+    chinese: 背景
+  - id: 1
+    english: candy
+    chinese: 糖果
+  - id: 2
+    english: egg tart
+    chinese: 蛋挞
+  - id: 3
+    english: french fries
+    chinese: 薯条
+  - id: 4
+    english: chocolate
+    chinese: 巧克力
+  - id: 5
+    english: biscuit
+    chinese: 饼干
+  - id: 6
+    english: popcorn
+    chinese: 爆米花
+  - id: 7
+    english: pudding
+    chinese: 布丁
+  - id: 8
+    english: ice cream
+    chinese: 冰淇淋
+  - id: 9
+    english: cheese butter
+    chinese: 奶酪黄油
+  - id: 10
+    english: cake
+    chinese: 蛋糕
+  - id: 11
+    english: wine
+    chinese: 葡萄酒
+  - id: 12
+    english: milkshake
+    chinese: 奶昔
+  - id: 13
+    english: coffee
+    chinese: 咖啡
+  - id: 14
+    english: juice
+    chinese: 果汁
+  - id: 15
+    english: milk
+    chinese: 牛奶
+  - id: 16
+    english: tea
+    chinese: 茶
+  - id: 17
+    english: almond
+    chinese: 杏仁
+  - id: 18
+    english: red beans
+    chinese: 红豆
+  - id: 19
+    english: cashew
+    chinese: 腰果
+  - id: 20
+    english: dried cranberries
+    chinese: 蔓越莓干
+  - id: 21
+    english: soy
+    chinese: 大豆
+  - id: 22
+    english: walnut
+    chinese: 核桃
+  - id: 23
+    english: peanut
+    chinese: 花生
+  - id: 24
+    english: egg
+    chinese: 鸡蛋
+  - id: 25
+    english: apple
+    chinese: 苹果
+  - id: 26
+    english: date
+    chinese: 红枣
+  - id: 27
+    english: apricot
+    chinese: 杏
+  - id: 28
+    english: avocado
+    chinese: 牛油果
+  - id: 29
+    english: banana
+    chinese: 香蕉
+  - id: 30
+    english: strawberry
+    chinese: 草莓
+  - id: 31
+    english: cherry
+    chinese: 樱桃
+  - id: 32
+    english: blueberry
+    chinese: 蓝莓
+  - id: 33
+    english: raspberry
+    chinese: 树莓
+  - id: 34
+    english: mango
+    chinese: 芒果
+  - id: 35
+    english: olives
+    chinese: 橄榄
+  - id: 36
+    english: peach
+    chinese: 桃子
+  - id: 37
+    english: lemon
+    chinese: 柠檬
+  - id: 38
+    english: pear
+    chinese: 梨
+  - id: 39
+    english: fig
+    chinese: 无花果
+  - id: 40
+    english: pineapple
+    chinese: 菠萝
+  - id: 41
+    english: grape
+    chinese: 葡萄
+  - id: 42
+    english: kiwi
+    chinese: 猕猴桃
+  - id: 43
+    english: melon
+    chinese: 甜瓜
+  - id: 44
+    english: orange
+    chinese: 橙子
+  - id: 45
+    english: watermelon
+    chinese: 西瓜
+  - id: 46
+    english: steak
+    chinese: 牛排
+  - id: 47
+    english: pork
+    chinese: 猪肉
+  - id: 48
+    english: chicken duck
+    chinese: 鸡鸭肉
+  - id: 49
+    english: sausage
+    chinese: 香肠
+  - id: 50
+    english: fried meat
+    chinese: 炸肉
+  - id: 51
+    english: lamb
+    chinese: 羊肉
+  - id: 52
+    english: sauce
+    chinese: 酱料
+  - id: 53
+    english: crab
+    chinese: 螃蟹
+  - id: 54
+    english: fish
+    chinese: 鱼
+  - id: 55
+    english: shellfish
+    chinese: 贝类
+  - id: 56
+    english: shrimp
+    chinese: 虾
+  - id: 57
+    english: soup
+    chinese: 汤
+  - id: 58
+    english: bread
+    chinese: 面包
+  - id: 59
+    english: corn
+    chinese: 玉米
+  - id: 60
+    english: hamburg
+    chinese: 汉堡
+  - id: 61
+    english: pizza
+    chinese: 披萨
+  - id: 62
+    english: hanamaki baozi
+    chinese: 花卷包子类
+  - id: 63
+    english: wonton dumplings
+    chinese: 馄饨饺子
+  - id: 64
+    english: pasta
+    chinese: 意面
+  - id: 65
+    english: noodles
+    chinese: 面条
+  - id: 66
+    english: rice
+    chinese: 米饭
+  - id: 67
+    english: pie
+    chinese: 派
+  - id: 68
+    english: tofu
+    chinese: 豆腐
+  - id: 69
+    english: eggplant
+    chinese: 茄子
+  - id: 70
+    english: potato
+    chinese: 土豆
+  - id: 71
+    english: garlic
+    chinese: 大蒜
+  - id: 72
+    english: cauliflower
+    chinese: 花菜
+  - id: 73
+    english: tomato
+    chinese: 番茄
+  - id: 74
+    english: kelp
+    chinese: 海带
+  - id: 75
+    english: seaweed
+    chinese: 紫菜
+  - id: 76
+    english: spring onion
+    chinese: 葱
+  - id: 77
+    english: rape
+    chinese: 油菜
+  - id: 78
+    english: ginger
+    chinese: 姜
+  - id: 79
+    english: okra
+    chinese: 秋葵
+  - id: 80
+    english: lettuce
+    chinese: 生菜
+  - id: 81
+    english: pumpkin
+    chinese: 南瓜
+  - id: 82
+    english: cucumber
+    chinese: 黄瓜
+  - id: 83
+    english: white radish
+    chinese: 白萝卜
+  - id: 84
+    english: carrot
+    chinese: 胡萝卜
+  - id: 85
+    english: asparagus
+    chinese: 芦笋
+  - id: 86
+    english: bamboo shoots
+    chinese: 竹笋
+  - id: 87
+    english: broccoli
+    chinese: 西兰花
+  - id: 88
+    english: celery stick
+    chinese: 芹菜
+  - id: 89
+    english: cilantro mint
+    chinese: 香菜薄荷类
+  - id: 90
+    english: snow peas
+    chinese: 荷兰豆
+  - id: 91
+    english: cabbage
+    chinese: 包菜
+  - id: 92
+    english: bean sprouts
+    chinese: 豆芽
+  - id: 93
+    english: onion
+    chinese: 洋葱
+  - id: 94
+    english: pepper
+    chinese: 椒类
+  - id: 95
+    english: green beans
+    chinese: 青豆角
+  - id: 96
+    english: French beans
+    chinese: 四季豆
+  - id: 97
+    english: king oyster mushroom
+    chinese: 杏鲍菇
+  - id: 98
+    english: shiitake
+    chinese: 香菇
+  - id: 99
+    english: enoki mushroom
+    chinese: 金针菇
+  - id: 100
+    english: oyster mushroom
+    chinese: 平菇
+  - id: 101
+    english: white button mushroom
+    chinese: 口蘑
+  - id: 102
+    english: salad
+    chinese: 沙拉
+  - id: 103
+    english: other ingredients
+    chinese: 其他食材
+
