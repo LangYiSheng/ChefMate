@@ -2,7 +2,6 @@
 import type {
   ConversationRecord,
   NavShortcut,
-  RecipeOverviewItem,
   UserProfileSummary,
 } from '../types/chat'
 
@@ -10,7 +9,6 @@ defineProps<{
   activeConversationId: string
   conversations: ConversationRecord[]
   isOpen: boolean
-  recipeOverview: RecipeOverviewItem[]
   shortcuts: NavShortcut[]
   userProfile: UserProfileSummary
 }>()
@@ -18,9 +16,18 @@ defineProps<{
 const emit = defineEmits<{
   close: []
   newConversation: []
+  openProfile: []
   selectConversation: [conversationId: string]
   selectShortcut: [shortcutId: string]
 }>()
+
+function conversationStageLabel(conversation: ConversationRecord) {
+  if (conversation.currentRecipe) {
+    return `${conversation.intentLabel} · ${conversation.currentRecipe}`
+  }
+
+  return conversation.intentLabel
+}
 </script>
 
 <template>
@@ -30,8 +37,8 @@ const emit = defineEmits<{
     <aside class="sidebar">
       <div class="sidebar-brand">
         <div>
-          <p class="eyebrow">ChefMate Workspace</p>
-          <h1>厨房对话工作台</h1>
+          <h1>ChefMate</h1>
+          <p class="subtitle">你的智能烹饪伙伴</p>
         </div>
 
         <button class="mobile-close" type="button" aria-label="关闭侧边栏" @click="emit('close')">
@@ -42,8 +49,8 @@ const emit = defineEmits<{
       <button class="new-chat-button" type="button" @click="emit('newConversation')">
         <span class="new-chat-icon">+</span>
         <span>
-          <strong>新建做饭任务</strong>
-          <small>从需求、现有食材或菜名开始</small>
+          <strong>开启一个新对话</strong>
+          <small>一起做一道菜，或者聊聊天</small>
         </span>
       </button>
 
@@ -53,35 +60,18 @@ const emit = defineEmits<{
           :key="shortcut.id"
           class="shortcut-item"
           type="button"
-          @click="shortcut.id === 'new-chat' ? emit('newConversation') : emit('selectShortcut', shortcut.id)"
+          @click="emit('selectShortcut', shortcut.id)"
         >
           <span>
             <strong>{{ shortcut.label }}</strong>
             <small>{{ shortcut.caption }}</small>
           </span>
-          <em v-if="shortcut.count">{{ shortcut.count }}</em>
         </button>
-      </section>
-
-      <section class="overview-section">
-        <div class="section-header">
-          <h2>菜谱总览</h2>
-          <span>本周建议</span>
-        </div>
-
-        <div class="overview-list">
-          <article v-for="recipe in recipeOverview" :key="recipe.id" class="overview-item">
-            <strong>{{ recipe.name }}</strong>
-            <span>{{ recipe.meta }}</span>
-            <small>{{ recipe.tone }}</small>
-          </article>
-        </div>
       </section>
 
       <section class="conversation-section">
         <div class="section-header">
           <h2>对话列表</h2>
-          <span>{{ conversations.length }} 条</span>
         </div>
 
         <div class="conversation-list">
@@ -93,17 +83,13 @@ const emit = defineEmits<{
             type="button"
             @click="emit('selectConversation', conversation.id)"
           >
-            <div class="conversation-meta">
-              <strong>{{ conversation.title }}</strong>
-              <span>{{ conversation.updatedAt }}</span>
-            </div>
-            <p>{{ conversation.preview }}</p>
-            <small>{{ conversation.intentLabel }}</small>
+            <strong>{{ conversation.statusText }}</strong>
+            <small>{{ conversationStageLabel(conversation) }}</small>
           </button>
         </div>
       </section>
 
-      <footer class="profile-card">
+      <button class="profile-card" type="button" @click="emit('openProfile')">
         <div class="profile-main">
           <div class="profile-avatar">{{ userProfile.name.slice(0, 1) }}</div>
           <div>
@@ -111,11 +97,7 @@ const emit = defineEmits<{
             <p>{{ userProfile.level }}</p>
           </div>
         </div>
-        <p class="profile-focus">{{ userProfile.focus }}</p>
-        <div class="profile-tags">
-          <span v-for="preference in userProfile.preferences" :key="preference">{{ preference }}</span>
-        </div>
-      </footer>
+      </button>
     </aside>
   </div>
 </template>
@@ -140,6 +122,7 @@ const emit = defineEmits<{
   overflow: hidden;
   flex-direction: column;
   width: 21rem;
+  height: 100vh;
   min-height: 100vh;
   padding: 1.25rem;
   border-right: 1px solid rgba(47, 93, 80, 0.1);
@@ -157,18 +140,16 @@ const emit = defineEmits<{
   margin-bottom: 1.25rem;
 }
 
-.eyebrow {
-  margin: 0 0 0.35rem;
-  color: var(--color-text-soft);
-  font-size: 0.72rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-}
-
 .sidebar-brand h1 {
   margin: 0;
-  font-size: 1.55rem;
+  font-size: 1.72rem;
   line-height: 1.1;
+}
+
+.subtitle {
+  margin: 0.35rem 0 0;
+  color: var(--color-text-soft);
+  font-size: 0.92rem;
 }
 
 .mobile-close {
@@ -196,7 +177,6 @@ const emit = defineEmits<{
 
 .new-chat-button strong,
 .shortcut-item strong,
-.overview-item strong,
 .conversation-item strong,
 .profile-card strong {
   display: block;
@@ -204,10 +184,7 @@ const emit = defineEmits<{
 
 .new-chat-button small,
 .shortcut-item small,
-.overview-item span,
-.overview-item small,
-.conversation-item p,
-.conversation-item span,
+.conversation-item small,
 .profile-card p {
   color: inherit;
   opacity: 0.78;
@@ -226,7 +203,6 @@ const emit = defineEmits<{
 }
 
 .shortcut-section,
-.overview-section,
 .conversation-section {
   margin-top: 1.15rem;
 }
@@ -241,11 +217,6 @@ const emit = defineEmits<{
 .section-header h2 {
   margin: 0;
   font-size: 0.98rem;
-}
-
-.section-header span {
-  color: var(--color-text-soft);
-  font-size: 0.78rem;
 }
 
 .shortcut-item,
@@ -266,31 +237,8 @@ const emit = defineEmits<{
 .shortcut-item {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 0.55rem;
+  margin-bottom: 0.35rem;
   background: rgba(255, 255, 255, 0.44);
-}
-
-.shortcut-item em {
-  color: var(--color-accent);
-  font-style: normal;
-  font-size: 0.78rem;
-}
-
-.overview-list {
-  display: grid;
-  gap: 0.7rem;
-}
-
-.overview-item {
-  padding: 0.95rem;
-  border: 1px solid var(--color-border);
-  border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.52);
-}
-
-.overview-item span,
-.overview-item small {
-  display: block;
 }
 
 .conversation-section {
@@ -303,7 +251,9 @@ const emit = defineEmits<{
 .conversation-list {
   display: grid;
   gap: 0.65rem;
+  min-height: 0;
   overflow-y: auto;
+  padding-right: 0.2rem;
 }
 
 .conversation-item {
@@ -324,26 +274,11 @@ const emit = defineEmits<{
   border-color: rgba(47, 93, 80, 0.18);
 }
 
-.conversation-meta {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.45rem;
-}
-
-.conversation-item p {
-  display: -webkit-box;
-  margin: 0 0 0.5rem;
-  overflow: hidden;
-  color: var(--color-text-soft);
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
 .conversation-item small {
+  display: block;
+  margin-top: 0.32rem;
   color: var(--color-accent);
-  font-size: 0.76rem;
+  font-size: 0.8rem;
 }
 
 .profile-card {
@@ -352,6 +287,8 @@ const emit = defineEmits<{
   border: 1px solid var(--color-border);
   border-radius: 1.15rem;
   background: rgba(255, 251, 245, 0.86);
+  text-align: left;
+  cursor: pointer;
 }
 
 .profile-main {
@@ -373,29 +310,10 @@ const emit = defineEmits<{
 }
 
 .profile-main p,
-.profile-focus {
+.profile-card p {
   margin: 0.18rem 0 0;
   color: var(--color-text-soft);
   font-size: 0.88rem;
-}
-
-.profile-focus {
-  margin-top: 0.85rem;
-}
-
-.profile-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem;
-  margin-top: 0.85rem;
-}
-
-.profile-tags span {
-  padding: 0.32rem 0.58rem;
-  border-radius: 999px;
-  background: rgba(47, 93, 80, 0.08);
-  color: var(--color-accent);
-  font-size: 0.76rem;
 }
 
 @media (max-width: 960px) {

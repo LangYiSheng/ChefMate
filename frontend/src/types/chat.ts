@@ -6,14 +6,6 @@ export interface NavShortcut {
   id: string
   label: string
   caption: string
-  count?: string
-}
-
-export interface RecipeOverviewItem {
-  id: string
-  name: string
-  meta: string
-  tone: string
 }
 
 export interface UserProfileSummary {
@@ -21,15 +13,21 @@ export interface UserProfileSummary {
   level: string
   focus: string
   preferences: string[]
+  email: string
+  availableTime: string
+  kitchenMode: string
+  tools: string[]
 }
 
 export interface ConversationRecord {
   id: string
   title: string
+  statusText: string
   preview: string
   updatedAt: string
   stage: ConversationStage
   intentLabel: string
+  currentRecipe?: string
   taskSummary: string
   quickPrompts: string[]
   messages: ChatMessage[]

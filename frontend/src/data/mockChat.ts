@@ -1,48 +1,14 @@
 import type {
   ConversationRecord,
   NavShortcut,
-  RecipeOverviewItem,
   UserProfileSummary,
 } from '../types/chat'
 
 export const sidebarShortcuts: NavShortcut[] = [
   {
-    id: 'new-chat',
-    label: '新对话',
-    caption: '创建新的做饭任务',
-  },
-  {
     id: 'recipes',
-    label: '菜谱总览',
-    caption: '本周偏好与候选菜',
-    count: '08',
-  },
-  {
-    id: 'history',
-    label: '对话列表',
-    caption: '最近一周的任务记录',
-    count: '12',
-  },
-]
-
-export const recipeOverview: RecipeOverviewItem[] = [
-  {
-    id: 'weekly-1',
-    name: '清炒芦笋牛肉',
-    meta: '18 分钟 · 高蛋白',
-    tone: '适合工作日晚餐',
-  },
-  {
-    id: 'weekly-2',
-    name: '豆角焖面',
-    meta: '28 分钟 · 一锅出',
-    tone: '下饭型选择',
-  },
-  {
-    id: 'weekly-3',
-    name: '菌菇鸡汤',
-    meta: '40 分钟 · 低负担',
-    tone: '适合提前准备',
+    label: '菜谱',
+    caption: '手动浏览全部菜谱',
   },
 ]
 
@@ -51,12 +17,17 @@ export const userProfile: UserProfileSummary = {
   level: '家常熟手',
   focus: '本周目标：20 分钟内完成两顿晚餐',
   preferences: ['偏清淡', '不吃香菜', '常用空气炸锅'],
+  email: 'chefmate.demo@example.com',
+  availableTime: '工作日晚饭 30 分钟内，周末可慢一点',
+  kitchenMode: '更偏家常快手，也愿意尝试一点新菜',
+  tools: ['空气炸锅', '不粘锅', '电饭煲', '小烤箱'],
 }
 
 const seedConversations: ConversationRecord[] = [
   {
     id: 'conversation-1',
     title: '周五晚饭安排',
+    statusText: '候选菜已经整理好了，等你拍板',
     preview: '候选菜已经缩到三道，正在确认今天走哪条口味线。',
     updatedAt: '3 分钟前',
     stage: 'planning',
@@ -125,10 +96,12 @@ const seedConversations: ConversationRecord[] = [
   {
     id: 'conversation-2',
     title: '冰箱清库存',
+    statusText: '食材比对完成，差一点就能开做',
     preview: '已识别现有食材，正在判断哪些东西缺口最关键。',
     updatedAt: '16 分钟前',
     stage: 'shopping',
     intentLabel: '备料中',
+    currentRecipe: '干锅花菜鸡腿肉',
     taskSummary: '以现有食材为主，尽量少买，优先判断是否能直接开做。',
     quickPrompts: ['把缺料清单列出来', '按现有食材重算菜谱', '能不能换一道菜'],
     messages: [
@@ -185,10 +158,12 @@ const seedConversations: ConversationRecord[] = [
   {
     id: 'conversation-3',
     title: '红烧排骨进行中',
+    statusText: '下一步准备开盖收汁',
     preview: '当前在焖煮阶段，后面只需要继续跟进步骤和计时提醒。',
     updatedAt: '1 小时前',
     stage: 'cooking',
     intentLabel: '烹饪中',
+    currentRecipe: '红烧排骨',
     taskSummary: '用户已开火，需要跟踪步骤、火候和计时。',
     quickPrompts: ['下一步做什么', '帮我记 5 分钟', '排骨太柴怎么办'],
     messages: [

@@ -5,24 +5,22 @@ import AppSidebar from './components/AppSidebar.vue'
 import ChatHeader from './components/ChatHeader.vue'
 import ComposerPanel from './components/ComposerPanel.vue'
 import MessageBubble from './components/MessageBubble.vue'
-import {
-  buildMockConversations,
-  recipeOverview,
-  sidebarShortcuts,
-  userProfile,
-} from './data/mockChat'
+import OverlayDialog from './components/OverlayDialog.vue'
+import ProfileSettingsPanel from './components/ProfileSettingsPanel.vue'
+import { buildMockConversations, sidebarShortcuts, userProfile } from './data/mockChat'
 import type { ChatMessage, ConversationRecord, ConversationStage, MessageCard } from './types/chat'
 
 const stageLabelMap: Record<ConversationStage, string> = {
-  idea: '想法确认',
-  planning: '菜品决策',
-  shopping: '备料检查',
-  cooking: '烹饪进行中',
+  idea: '闲聊',
+  planning: '推荐中',
+  shopping: '备料中',
+  cooking: '烹饪中',
 }
 
 const conversations = ref<ConversationRecord[]>(buildMockConversations())
 const activeConversationId = ref(conversations.value[0]?.id ?? '')
 const sidebarOpen = ref(false)
+const profilePanelOpen = ref(false)
 const typingConversationId = ref<string | null>(null)
 const pendingResponseTimer = ref<number | null>(null)
 const messageViewport = useTemplateRef<HTMLDivElement>('messageViewport')
@@ -92,6 +90,15 @@ function closeSidebar() {
   sidebarOpen.value = false
 }
 
+function openProfilePanel() {
+  profilePanelOpen.value = true
+  closeSidebar()
+}
+
+function closeProfilePanel() {
+  profilePanelOpen.value = false
+}
+
 function selectConversation(conversationId: string) {
   activeConversationId.value = conversationId
   closeSidebar()
@@ -108,10 +115,6 @@ function selectShortcut(shortcutId: string) {
     }
   }
 
-  if (shortcutId === 'history') {
-    activeConversationId.value = conversations.value[0]?.id ?? activeConversationId.value
-  }
-
   closeSidebar()
 }
 
@@ -119,10 +122,11 @@ function startNewConversation() {
   const conversation: ConversationRecord = {
     id: `conversation-new-${newConversationIndex}`,
     title: `新的做饭任务 ${newConversationIndex}`,
+    statusText: '等你说一句想吃什么',
     preview: '想吃点什么？我可以先帮你做一轮定向推荐。',
     updatedAt: '刚刚',
     stage: 'idea',
-    intentLabel: '新会话',
+    intentLabel: '闲聊',
     taskSummary: '等待确认今晚做什么，以及可接受的时长和口味偏好。',
     quickPrompts: ['20 分钟内搞定晚饭', '冰箱里有鸡蛋和番茄', '想吃清淡一点'],
     messages: [
@@ -288,6 +292,8 @@ function buildAssistantResponse(
   content: string
   cards: MessageCard[]
   nextStage: ConversationStage
+  nextIntentLabel: string
+  statusText: string
   taskSummary: string
   quickPrompts: string[]
 } {
@@ -305,6 +311,8 @@ function buildAssistantResponse(
         '我先把候选菜缩成三个方向，右侧卡片里每个方案都带了时长、热量和匹配理由，后续接接口后也可以直接复用这套展示结构。',
       cards: [buildRecommendationCard()],
       nextStage: 'planning',
+      nextIntentLabel: '推荐中',
+      statusText: '候选菜已经整理好了，等你拍板',
       taskSummary: '已进入候选菜筛选阶段，等待用户在推荐集合里确认目标菜品。',
       quickPrompts: ['就做第一个', '按清淡一点再改一版', '告诉我需要准备什么'],
     }
@@ -316,6 +324,8 @@ function buildAssistantResponse(
         '我按“齐备、缺失、库存不足”三个状态整理了一遍，后端以后只要返回结构化字段，这里就能直接驱动缺料判断和补买建议。',
       cards: [buildPantryCard()],
       nextStage: 'shopping',
+      nextIntentLabel: '备料中',
+      statusText: '食材比对完成，差一点就能开做',
       taskSummary: '正在比对现有食材和目标菜谱要求，并生成补买或换菜建议。',
       quickPrompts: ['生成补买清单', '按现有食材简化一下', '我想直接开始做'],
     }
@@ -327,19 +337,23 @@ function buildAssistantResponse(
         '已经把步骤流切成当前、下一步和待执行三种状态，后面接流式响应时可以边返回文本边推进这张卡片，不需要改页面结构。',
       cards: [buildCookingGuideCard()],
       nextStage: 'cooking',
+      nextIntentLabel: '烹饪中',
+      statusText: '正在推进当前步骤，随时可以继续追问',
       taskSummary: '已进入烹饪指导阶段，支持继续追问、计时提醒和步骤推进。',
       quickPrompts: ['下一步做什么', '帮我提醒焖 3 分钟', '这一步火候要多大'],
     }
   }
 
   return {
-    content:
-      '我先把这条需求记进当前任务里了。这个页面现在已经按“会话元数据 + 消息流 + 结构化卡片”分层，后面无论走普通问答还是任务型消息都能接住。',
-    cards: [],
-    nextStage: conversation.stage,
-    taskSummary: conversation.taskSummary,
-    quickPrompts: conversation.quickPrompts,
-  }
+      content:
+        '我先把这条需求记进当前任务里了。这个页面现在已经按“会话元数据 + 消息流 + 结构化卡片”分层，后面无论走普通问答还是任务型消息都能接住。',
+      cards: [],
+      nextStage: conversation.stage,
+      nextIntentLabel: conversation.intentLabel,
+      statusText: conversation.statusText,
+      taskSummary: conversation.taskSummary,
+      quickPrompts: conversation.quickPrompts,
+    }
 }
 
 function sendMessage(prompt: string) {
@@ -380,6 +394,8 @@ function sendMessage(prompt: string) {
     targetConversation.updatedAt = '刚刚'
     targetConversation.preview = response.content
     targetConversation.stage = response.nextStage
+    targetConversation.intentLabel = response.nextIntentLabel
+    targetConversation.statusText = response.statusText
     targetConversation.taskSummary = response.taskSummary
     targetConversation.quickPrompts = response.quickPrompts
 
@@ -398,11 +414,11 @@ function sendMessage(prompt: string) {
       :conversations="conversations"
       :active-conversation-id="activeConversationId"
       :is-open="sidebarOpen"
-      :recipe-overview="recipeOverview"
       :shortcuts="sidebarShortcuts"
       :user-profile="userProfile"
       @close="closeSidebar"
       @new-conversation="startNewConversation"
+      @open-profile="openProfilePanel"
       @select-conversation="selectConversation"
       @select-shortcut="selectShortcut"
     />
@@ -438,13 +454,19 @@ function sendMessage(prompt: string) {
         @send="sendMessage"
       />
     </main>
+
+    <OverlayDialog :is-open="profilePanelOpen" @close="closeProfilePanel">
+      <ProfileSettingsPanel :user-profile="userProfile" />
+    </OverlayDialog>
   </div>
 </template>
 
 <style scoped>
 .app-shell {
   display: flex;
+  height: 100vh;
   min-height: 100vh;
+  overflow: hidden;
   background:
     radial-gradient(circle at top left, rgba(229, 143, 91, 0.18), transparent 24rem),
     radial-gradient(circle at right, rgba(54, 106, 94, 0.12), transparent 26rem),
@@ -454,8 +476,10 @@ function sendMessage(prompt: string) {
 .workspace {
   display: grid;
   flex: 1;
+  height: 100vh;
   min-width: 0;
   min-height: 100vh;
+  overflow: hidden;
   grid-template-rows: auto minmax(0, 1fr) auto;
 }
 
