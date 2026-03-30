@@ -4,37 +4,45 @@ import type { RecipeRecommendationsCard as RecipeRecommendationsCardType } from 
 defineProps<{
   card: RecipeRecommendationsCardType
 }>()
+
+const emit = defineEmits<{
+  action: [message: string]
+}>()
 </script>
 
 <template>
   <section class="card-shell">
     <div class="card-head">
-      <div>
-        <p>推荐结果卡</p>
-        <h3>{{ card.title }}</h3>
-      </div>
-      <span>Mock Data</span>
+      <h3>{{ card.title }}</h3>
+      <span>{{ card.recipes.length }} 道候选</span>
     </div>
 
-    <p class="summary">{{ card.summary }}</p>
-
     <div class="recipe-grid">
-      <article v-for="recipe in card.recipes" :key="recipe.id" class="recipe-item">
+      <article v-for="recipe in card.recipes" :key="recipe.recipeId" class="recipe-item">
         <div class="recipe-top">
           <div>
             <strong>{{ recipe.name }}</strong>
-            <small>{{ recipe.fitReason }}</small>
+            <small>{{ recipe.description }}</small>
           </div>
-          <span>{{ recipe.duration }}</span>
+          <span>{{ recipe.estimatedMinutes }} 分钟</span>
         </div>
 
         <div class="recipe-meta">
           <span>{{ recipe.difficulty }}</span>
-          <span>{{ recipe.calories }}</span>
+          <span>{{ recipe.servings }} 人份</span>
         </div>
 
         <div class="tag-row">
-          <em v-for="highlight in recipe.highlights" :key="highlight">{{ highlight }}</em>
+          <em v-for="tag in recipe.tags" :key="tag">{{ tag }}</em>
+        </div>
+
+        <div class="action-row">
+          <button type="button" class="ghost-button" @click="emit('action', recipe.detailAction.message)">
+            {{ recipe.detailAction.label }}
+          </button>
+          <button type="button" class="primary-button" @click="emit('action', recipe.tryAction.message)">
+            {{ recipe.tryAction.label }}
+          </button>
         </div>
       </article>
     </div>
@@ -43,6 +51,7 @@ defineProps<{
 
 <style scoped>
 .card-shell {
+  min-width: min(100%, 34rem);
   padding: 1rem;
   border: 1px solid rgba(47, 93, 80, 0.16);
   border-radius: 1.35rem;
@@ -58,18 +67,9 @@ defineProps<{
   align-items: flex-start;
 }
 
-.card-head p,
-.summary,
 .recipe-item small,
 .recipe-meta {
   color: var(--color-text-soft);
-}
-
-.card-head p {
-  margin: 0 0 0.25rem;
-  font-size: 0.72rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
 }
 
 .card-head h3 {
@@ -86,14 +86,11 @@ defineProps<{
   font-size: 0.76rem;
 }
 
-.summary {
-  margin: 0.7rem 0 0;
-}
-
 .recipe-grid {
   display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.8rem;
-  margin-top: 1rem;
+  margin-top: 0.9rem;
 }
 
 .recipe-item {
@@ -107,7 +104,6 @@ defineProps<{
   display: flex;
   justify-content: space-between;
   gap: 0.85rem;
-  margin-bottom: 0.7rem;
 }
 
 .recipe-top strong,
@@ -125,7 +121,7 @@ defineProps<{
 .recipe-meta {
   display: flex;
   gap: 0.8rem;
-  margin-bottom: 0.8rem;
+  margin-top: 0.75rem;
   font-size: 0.82rem;
 }
 
@@ -133,6 +129,7 @@ defineProps<{
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
+  margin-top: 0.8rem;
 }
 
 .tag-row em {
@@ -142,5 +139,47 @@ defineProps<{
   color: #a05522;
   font-style: normal;
   font-size: 0.76rem;
+}
+
+.action-row {
+  display: flex;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.action-row button {
+  flex: 1;
+  min-height: 2.7rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: 0.95rem;
+  cursor: pointer;
+}
+
+.ghost-button {
+  border: 1px solid rgba(47, 93, 80, 0.14);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--color-accent);
+}
+
+.primary-button {
+  background: linear-gradient(135deg, rgba(47, 93, 80, 0.96), rgba(32, 57, 49, 0.96));
+  color: #fef7ef;
+}
+
+@media (max-width: 640px) {
+  .recipe-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .action-row {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 980px) {
+  .recipe-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 </style>

@@ -62,3 +62,36 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+.hover-scroll {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.hover-scroll:hover {
+  scrollbar-color: rgba(47, 93, 80, 0.32) transparent;
+}
+
+.hover-scroll::-webkit-scrollbar {
+  width: 0.4rem;
+  height: 0.4rem;
+}
+
+.hover-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.hover-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: transparent;
+  transition: background 180ms ease;
+}
+
+.hover-scroll:hover::-webkit-scrollbar-thumb {
+  background: rgba(47, 93, 80, 0.32);
+}
+
+.hover-scroll:hover::-webkit-scrollbar-thumb:hover {
+  background: rgba(47, 93, 80, 0.48);
+}

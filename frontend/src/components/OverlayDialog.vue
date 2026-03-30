@@ -49,9 +49,10 @@ function onBackdropClick(event: MouseEvent) {
 
 .overlay-card {
   position: relative;
-  width: min(100%, 52rem);
-  max-height: min(88vh, 56rem);
-  overflow-y: auto;
+  display: grid;
+  width: min(100%, 56rem);
+  height: min(82vh, 44rem);
+  overflow: hidden;
   padding: 1.5rem;
   border: 1px solid rgba(47, 93, 80, 0.16);
   border-radius: 1.6rem;
@@ -62,9 +63,9 @@ function onBackdropClick(event: MouseEvent) {
 }
 
 .overlay-close {
-  position: sticky;
-  top: 0;
-  float: right;
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -94,6 +95,7 @@ function onBackdropClick(event: MouseEvent) {
 
   .overlay-card {
     width: 100%;
+    height: min(88vh, 48rem);
     padding: 1.1rem;
     border-radius: 1.3rem;
   }

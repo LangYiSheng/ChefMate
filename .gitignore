@@ -19,3 +19,6 @@ ml/vision/weights/
 *.egg-info/
 *.egg
 .eggs/
+
+# Prompts
+prompt

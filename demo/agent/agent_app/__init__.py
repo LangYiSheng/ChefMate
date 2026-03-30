@@ -1,1 +1,0 @@
-"""ChefMate CLI demo package."""

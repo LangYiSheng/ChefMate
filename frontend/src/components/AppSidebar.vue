@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import type {
   ConversationRecord,
+  ConversationTimerSlot,
   NavShortcut,
   UserProfileSummary,
 } from '../types/chat'
 
-defineProps<{
+const props = defineProps<{
   activeConversationId: string
   conversations: ConversationRecord[]
+  conversationTimers: Record<string, ConversationTimerSlot>
   isOpen: boolean
   shortcuts: NavShortcut[]
   userProfile: UserProfileSummary
@@ -27,6 +29,21 @@ function conversationStageLabel(conversation: ConversationRecord) {
   }
 
   return conversation.intentLabel
+}
+
+function conversationHeadline(conversation: ConversationRecord) {
+  return conversation.statusText
+}
+
+function conversationMeta(conversation: ConversationRecord) {
+  const timerSlot = props.conversationTimers[conversation.id]
+  const stageLabel = conversationStageLabel(conversation)
+
+  if (timerSlot?.status === 'running' && timerSlot.remainingSeconds > 0) {
+    return `${stageLabel} · 正在倒计时`
+  }
+
+  return stageLabel
 }
 </script>
 
@@ -74,7 +91,7 @@ function conversationStageLabel(conversation: ConversationRecord) {
           <h2>对话列表</h2>
         </div>
 
-        <div class="conversation-list">
+        <div class="conversation-list hover-scroll">
           <button
             v-for="conversation in conversations"
             :key="conversation.id"
@@ -83,8 +100,8 @@ function conversationStageLabel(conversation: ConversationRecord) {
             type="button"
             @click="emit('selectConversation', conversation.id)"
           >
-            <strong>{{ conversation.statusText }}</strong>
-            <small>{{ conversationStageLabel(conversation) }}</small>
+            <strong>{{ conversationHeadline(conversation) }}</strong>
+            <small>{{ conversationMeta(conversation) }}</small>
           </button>
         </div>
       </section>
@@ -94,9 +111,10 @@ function conversationStageLabel(conversation: ConversationRecord) {
           <div class="profile-avatar">{{ userProfile.name.slice(0, 1) }}</div>
           <div>
             <strong>{{ userProfile.name }}</strong>
-            <p>{{ userProfile.level }}</p>
+            <p>@{{ userProfile.account }}</p>
           </div>
         </div>
+        <span class="profile-overlay">点击设置个人信息</span>
       </button>
     </aside>
   </div>
@@ -180,6 +198,7 @@ function conversationStageLabel(conversation: ConversationRecord) {
 .conversation-item strong,
 .profile-card strong {
   display: block;
+  line-height: 1.4;
 }
 
 .new-chat-button small,
@@ -265,7 +284,6 @@ function conversationStageLabel(conversation: ConversationRecord) {
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(241, 246, 243, 0.78)),
     rgba(255, 255, 255, 0.42);
-  box-shadow: 0 18px 30px rgba(29, 43, 39, 0.08);
 }
 
 .conversation-item:hover,
@@ -279,9 +297,12 @@ function conversationStageLabel(conversation: ConversationRecord) {
   margin-top: 0.32rem;
   color: var(--color-accent);
   font-size: 0.8rem;
+  line-height: 1.45;
 }
 
 .profile-card {
+  position: relative;
+  overflow: hidden;
   margin-top: 1rem;
   padding: 1rem;
   border: 1px solid var(--color-border);
@@ -314,6 +335,29 @@ function conversationStageLabel(conversation: ConversationRecord) {
   margin: 0.18rem 0 0;
   color: var(--color-text-soft);
   font-size: 0.88rem;
+}
+
+.profile-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 1rem 1.1rem;
+  background: rgba(17, 17, 17, 0.7);
+  color: #fffaf3;
+  font-size: 1.02rem;
+  font-weight: 700;
+  text-align: left;
+  line-height: 1.4;
+  opacity: 0;
+  transition: opacity 180ms ease;
+  backdrop-filter: blur(6px);
+}
+
+.profile-card:hover .profile-overlay,
+.profile-card:focus-visible .profile-overlay {
+  opacity: 1;
 }
 
 @media (max-width: 960px) {

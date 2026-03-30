@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import MessageCardRenderer from './cards/MessageCardRenderer.vue'
-import type { ChatMessage } from '../types/chat'
+import type { ChatMessage, TimerRequest } from '../types/chat'
 
 defineProps<{
   message: ChatMessage
+  autoStartStepTimer: boolean
+}>()
+
+const emit = defineEmits<{
+  cardAction: [message: string]
+  timerRequest: [payload: TimerRequest]
 }>()
 
 function avatarText(role: ChatMessage['role']) {
@@ -24,12 +30,30 @@ function avatarText(role: ChatMessage['role']) {
     <div class="avatar">{{ avatarText(message.role) }}</div>
 
     <div class="message-body">
-      <div class="message-bubble">
+      <div v-if="message.content" class="message-bubble">
         <p>{{ message.content }}</p>
       </div>
 
+      <div v-if="message.attachments?.length" class="attachment-stack">
+        <figure
+          v-for="attachment in message.attachments"
+          :key="attachment.id"
+          class="message-attachment"
+        >
+          <img :src="attachment.previewUrl" :alt="attachment.name" />
+          <figcaption>{{ attachment.name }}</figcaption>
+        </figure>
+      </div>
+
       <div v-if="message.cards?.length" class="card-stack">
-        <MessageCardRenderer v-for="card in message.cards" :key="card.title" :card="card" />
+        <MessageCardRenderer
+          v-for="card in message.cards"
+          :key="card.title"
+          :card="card"
+          :auto-start-step-timer="autoStartStepTimer"
+          @action="emit('cardAction', $event)"
+          @start-timer="emit('timerRequest', $event)"
+        />
       </div>
 
       <time class="message-time">{{ message.createdAt }}</time>
@@ -72,6 +96,11 @@ function avatarText(role: ChatMessage['role']) {
   max-width: min(100%, 48rem);
 }
 
+.message-row.assistant .message-body,
+.message-row.system .message-body {
+  width: min(100%, 48rem);
+}
+
 .message-bubble {
   padding: 1rem 1.1rem;
   border: 1px solid var(--color-border);
@@ -93,6 +122,38 @@ function avatarText(role: ChatMessage['role']) {
   display: grid;
   gap: 0.85rem;
   margin-top: 0.85rem;
+}
+
+.attachment-stack {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+}
+
+.message-attachment {
+  width: min(100%, 20rem);
+  margin: 0;
+  padding: 0.55rem;
+  border: 1px solid rgba(47, 93, 80, 0.12);
+  border-radius: 1rem;
+  background: rgba(255, 252, 247, 0.92);
+  box-shadow: 0 14px 26px rgba(30, 42, 39, 0.07);
+}
+
+.message-row.user .message-attachment {
+  margin-left: auto;
+}
+
+.message-attachment img {
+  display: block;
+  width: 100%;
+  border-radius: 0.75rem;
+}
+
+.message-attachment figcaption {
+  margin-top: 0.45rem;
+  color: var(--color-text-soft);
+  font-size: 0.78rem;
 }
 
 .message-time {
