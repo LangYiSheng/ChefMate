@@ -1,0 +1,406 @@
+  {
+  "dataset": "agent_core_v1",
+  "suite": "end_to_end",
+  "construction_method": "手工场景集",
+  "cases": [
+    {
+      "case_id": "e2e_01",
+      "suite": "end_to_end",
+      "title": "目录菜谱从推荐进入备料",
+      "goal": "从推荐中选择目录菜谱，并基于卡片状态尝试继续推进任务。",
+      "initial_state": {
+        "conversation_stage": "idea"
+      },
+      "turns": [
+        {
+          "content": "给我推荐一道简单晚餐",
+          "expectations": {
+            "required_tools": ["recommend_recipes"],
+            "expected_stage_after_turn": "planning"
+          }
+        },
+        {
+          "action": {
+            "action_type": "try_recipe",
+            "payload": {
+              "recipe_id": "$catalog:first_id"
+            }
+          },
+          "expectations": {
+            "required_tools": ["create_or_update_task_recipe"],
+            "expected_stage_after_turn": "planning"
+          }
+        },
+        {
+          "content": "开始备料",
+          "expectations": {
+            "required_tools": ["advance_to_preparation"],
+            "expected_stage_after_turn": "shopping"
+          }
+        },
+        {
+          "content": "这些都备齐了，开始做吧",
+          "client_card_state": {
+            "pantry_status": {
+              "ready_ingredient_ids": ["ingredient-1", "ingredient-2", "ingredient-3"],
+              "flash_mode": false
+            }
+          }
+        }
+      ],
+      "expectations": {
+        "expected_final_stage": "shopping",
+        "max_turns": 4
+      },
+      "tags": ["end_to_end", "catalog_recipe", "card_action", "client_card_state"]
+    },
+    {
+      "case_id": "e2e_02",
+      "suite": "end_to_end",
+      "title": "现写菜谱后进入备料",
+      "goal": "用户描述想法后由模型创建菜谱并推进到备料阶段。",
+      "initial_state": {
+        "conversation_stage": "idea"
+      },
+      "turns": [
+        {
+          "content": "我想吃一道清淡一点、十几分钟能搞定的家常菜，你直接现写一份菜谱"
+        },
+        {
+          "content": "好，就按这道开始备料"
+        }
+      ],
+      "expectations": {
+        "required_tools": ["create_or_update_task_recipe", "advance_to_preparation"],
+        "expected_final_stage": "shopping",
+        "max_turns": 2
+      },
+      "tags": ["end_to_end", "generated_recipe"]
+    },
+    {
+      "case_id": "e2e_03",
+      "suite": "end_to_end",
+      "title": "围绕当前步骤继续追问",
+      "goal": "用户切到后面步骤后继续追问时，应持续围绕当前步骤。",
+      "initial_state": {
+        "conversation_stage": "cooking",
+        "current_task": {
+          "stage": "cooking",
+          "recipe_snapshot_preset": "air_fryer_fries",
+          "ingredient_overrides": [
+            {"ingredient_name": "土豆", "status": "ready"},
+            {"ingredient_name": "食用油", "status": "ready"},
+            {"ingredient_name": "盐", "status": "ready"}
+          ],
+          "step_overrides": [
+            {"step_no": 1, "status": "done"},
+            {"step_no": 2, "status": "done"},
+            {"step_no": 3, "status": "done"},
+            {"step_no": 4, "status": "current"},
+            {"step_no": 5, "status": "pending"}
+          ]
+        }
+      },
+      "turns": [
+        {
+          "content": "这一步能详细说说吗",
+          "client_card_state": {
+            "cooking_guide": {
+              "current_step": 4,
+              "focused_step_id": "step-4",
+              "flash_mode": false
+            }
+          },
+          "expectations": {
+            "expected_stage_after_turn": "cooking",
+            "expected_response_constraints": {
+              "contains_any": ["第 4 步", "预热", "空气炸锅"]
+            }
+          }
+        },
+        {
+          "content": "那下一步是什么",
+          "client_card_state": {
+            "cooking_guide": {
+              "current_step": 4,
+              "focused_step_id": "step-4",
+              "flash_mode": false
+            }
+          },
+          "expectations": {
+            "expected_stage_after_turn": "cooking",
+            "expected_response_constraints": {
+              "contains_any": ["第 5 步", "下一步"]
+            }
+          }
+        }
+      ],
+      "expectations": {
+        "expected_final_stage": "cooking",
+        "max_turns": 2
+      },
+      "tags": ["end_to_end", "client_card_state", "step_focus"]
+    },
+    {
+      "case_id": "e2e_04",
+      "suite": "end_to_end",
+      "title": "备料回滚再继续",
+      "goal": "用户中途想换菜，回滚后重新继续。",
+      "initial_state": {
+        "conversation_stage": "shopping",
+        "current_task": {
+          "stage": "shopping",
+          "recipe_snapshot_preset": "tomato_egg"
+        }
+      },
+      "turns": [
+        {
+          "content": "我想换道菜，先回推荐"
+        },
+        {
+          "content": "那就再给我推荐几道清淡一点的"
+        }
+      ],
+      "expectations": {
+        "required_tools": ["rollback_to_recommendation", "recommend_recipes"],
+        "expected_final_stage": "planning",
+        "max_turns": 2
+      },
+      "tags": ["end_to_end", "rollback"]
+    },
+    {
+      "case_id": "e2e_05",
+      "suite": "end_to_end",
+      "title": "备料中取消",
+      "goal": "多轮后在备料阶段取消任务。",
+      "initial_state": {
+        "conversation_stage": "shopping",
+        "current_task": {
+          "stage": "shopping",
+          "recipe_snapshot_preset": "weeknight_omelette"
+        }
+      },
+      "turns": [
+        {
+          "content": "清单给我看看"
+        },
+        {
+          "content": "算了，今天不做了，取消吧"
+        }
+      ],
+      "expectations": {
+        "required_tools": ["show_pantry_card", "cancel_preparation_task"],
+        "expected_final_stage": "idea",
+        "max_turns": 2
+      },
+      "tags": ["end_to_end", "cancel", "shopping"]
+    },
+    {
+      "case_id": "e2e_06",
+      "suite": "end_to_end",
+      "title": "烹饪中取消",
+      "goal": "多轮后在烹饪阶段取消任务。",
+      "initial_state": {
+        "conversation_stage": "cooking",
+        "current_task": {
+          "stage": "cooking",
+          "recipe_snapshot_preset": "weeknight_omelette",
+          "ingredient_overrides": [
+            {"ingredient_name": "鸡蛋", "status": "ready"},
+            {"ingredient_name": "葱花", "status": "ready"},
+            {"ingredient_name": "盐", "status": "ready"}
+          ]
+        }
+      },
+      "turns": [
+        {
+          "content": "这一步火候大概多大"
+        },
+        {
+          "content": "先不做了，取消今天这次任务"
+        }
+      ],
+      "expectations": {
+        "required_tools": ["cancel_cooking_task"],
+        "expected_final_stage": "idea",
+        "max_turns": 2
+      },
+      "tags": ["end_to_end", "cancel", "cooking"]
+    },
+    {
+      "case_id": "e2e_07",
+      "suite": "end_to_end",
+      "title": "先看详情再进入备料",
+      "goal": "用户先看详情，再决定开始备料。",
+      "initial_state": {
+        "conversation_stage": "planning",
+        "current_task": {
+          "stage": "planning",
+          "recipe_snapshot_preset": "garlic_broccoli"
+        }
+      },
+      "turns": [
+        {
+          "content": "先把这道菜详情给我看看"
+        },
+        {
+          "content": "好，就按这个开始备料"
+        }
+      ],
+      "expectations": {
+        "required_tools": ["show_recipe_detail_card", "advance_to_preparation"],
+        "expected_final_stage": "shopping",
+        "max_turns": 2
+      },
+      "tags": ["end_to_end", "detail_card"]
+    },
+    {
+      "case_id": "e2e_08",
+      "suite": "end_to_end",
+      "title": "生成菜谱后进入备料并尝试继续推进",
+      "goal": "模型创建菜谱后，先进入备料，再根据用户输入尝试继续推进。",
+      "initial_state": {
+        "conversation_stage": "idea"
+      },
+      "turns": [
+        {
+          "content": "给我现写一道空气炸锅也能做的简易晚餐"
+        },
+        {
+          "content": "开始备料"
+        },
+        {
+          "content": "这些都备齐了，继续"
+        }
+      ],
+      "expectations": {
+        "required_tools": ["create_or_update_task_recipe", "advance_to_preparation"],
+        "expected_final_stage": "shopping",
+        "max_turns": 3
+      },
+      "tags": ["end_to_end", "generated_recipe", "advance"]
+    },
+    {
+      "case_id": "e2e_09",
+      "suite": "end_to_end",
+      "title": "推荐不满意后再次细化",
+      "goal": "用户对第一轮推荐不满意时，应继续推荐而不是卡住。",
+      "initial_state": {
+        "conversation_stage": "idea"
+      },
+      "turns": [
+        {
+          "content": "给我推荐几道晚餐"
+        },
+        {
+          "content": "太重口了，来点更清淡、更快手的"
+        }
+      ],
+      "expectations": {
+        "required_tools": ["recommend_recipes"],
+        "expected_final_stage": "planning",
+        "max_turns": 2
+      },
+      "tags": ["end_to_end", "recommendation_refine"]
+    },
+    {
+      "case_id": "e2e_10",
+      "suite": "end_to_end",
+      "title": "通过卡片动作从备料推进烹饪",
+      "goal": "用户通过卡片语义动作触发推进，应完成从备料到烹饪的迁移。",
+      "initial_state": {
+        "conversation_stage": "shopping",
+        "current_task": {
+          "stage": "shopping",
+          "recipe_snapshot_preset": "air_fryer_fries",
+          "ingredient_overrides": [
+            {"ingredient_name": "土豆", "status": "ready"},
+            {"ingredient_name": "食用油", "status": "ready"},
+            {"ingredient_name": "盐", "status": "ready"}
+          ]
+        }
+      },
+      "turns": [
+        {
+          "action": {
+            "action_type": "ingredients_ready",
+            "payload": {}
+          }
+        }
+      ],
+      "expectations": {
+        "required_tools": ["advance_to_cooking"],
+        "expected_final_stage": "cooking",
+        "max_turns": 1
+      },
+      "tags": ["end_to_end", "card_action", "shopping", "cooking"]
+    },
+    {
+      "case_id": "e2e_11",
+      "suite": "end_to_end",
+      "title": "逐步完成后结束烹饪",
+      "goal": "先更新当前步骤，再在最后一步完成后正确结束任务。",
+      "initial_state": {
+        "conversation_stage": "cooking",
+        "current_task": {
+          "stage": "cooking",
+          "recipe_snapshot_preset": "tomato_egg",
+          "ingredient_overrides": [
+            {"ingredient_name": "番茄", "status": "ready"},
+            {"ingredient_name": "鸡蛋", "status": "ready"},
+            {"ingredient_name": "葱", "status": "ready"}
+          ],
+          "step_overrides": [
+            {"step_no": 1, "status": "done"},
+            {"step_no": 2, "status": "done"},
+            {"step_no": 3, "status": "done"},
+            {"step_no": 4, "status": "current"},
+            {"step_no": 5, "status": "pending"}
+          ]
+        }
+      },
+      "turns": [
+        {
+          "content": "第四步也完成了"
+        },
+        {
+          "content": "最后一步也做好了，帮我结束这次烹饪"
+        }
+      ],
+      "expectations": {
+        "required_tools": ["update_task_recipe_for_cooking", "complete_cooking_task"],
+        "expected_final_stage": "idea",
+        "expected_task_assertions": {
+          "current_task_exists": false
+        },
+        "max_turns": 2
+      },
+      "tags": ["end_to_end", "cooking", "completion_attempt"]
+    },
+    {
+      "case_id": "e2e_12",
+      "suite": "end_to_end",
+      "title": "图片辅助推荐",
+      "goal": "用户发图后，应能结合图片识别进入推荐流程。",
+      "initial_state": {
+        "conversation_stage": "idea"
+      },
+      "turns": [
+        {
+          "content": "我拍了张冰箱食材图，帮我推荐一下",
+          "attachments": [
+            {
+              "path": "ml/runs/detect/val2/val_batch1_pred.jpg"
+            }
+          ]
+        }
+      ],
+      "expectations": {
+        "required_tools": ["recognize_image_ingredients"],
+        "expected_final_stage": "planning",
+        "max_turns": 1
+      },
+      "tags": ["end_to_end", "image", "attachment"]
+    }
+  ]
+}

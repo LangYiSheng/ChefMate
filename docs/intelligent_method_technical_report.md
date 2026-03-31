@@ -46,61 +46,7 @@ idea -> planning -> shopping -> cooking -> idea
 
 ### 2.3 输入数据与输出结果
 
-输入不仅是用户文本，还包括上下文状态。
 
-当前关键输入包括：
-
-- 用户文本消息
-- 卡片动作
-- 上传图片
-- 当前任务菜谱快照
-- 最近消息窗口
-- 用户长期记忆
-- 前端卡片状态 `client_card_state`
-
-输入样例：
-
-```json
-{
-  "conversation_id": "17bdfe15-7551-4ccb-bbdd-1accabc33f85",
-  "content": "下一步是什么？",
-  "attachments": [],
-  "action": null,
-  "client_card_state": {
-    "cooking_guide": {
-      "current_step": 4,
-      "focused_step_id": "step-4",
-      "flash_mode": false
-    }
-  }
-}
-```
-
-输出样例：
-
-```json
-{
-  "event": "final",
-  "data": {
-    "conversation": {
-      "id": "17bdfe15-7551-4ccb-bbdd-1accabc33f85",
-      "title": "空气炸锅晚餐推荐",
-      "stage": "cooking",
-      "current_recipe_name": "空气炸锅薯条"
-    },
-    "message": {
-      "role": "assistant",
-      "content": "你现在看到的是第 4 步，如果问“下一步”，通常就是第 5 步……",
-      "cards": [
-        {
-          "type": "cooking-guide",
-          "current_step": 4
-        }
-      ]
-    }
-  }
-}
-```
 
 
 ## 3. 智能方法二：菜谱推荐

@@ -1,0 +1,520 @@
+{
+  "dataset": "agent_core_v1",
+  "suite": "transition_decision",
+  "construction_method": "手工场景集",
+  "cases": [
+    {
+      "case_id": "transition_01",
+      "suite": "transition_decision",
+      "title": "合法进入推荐阶段",
+      "goal": "无任务阶段明确要推荐时，应进入推荐阶段。",
+      "initial_state": {
+        "conversation_stage": "idea"
+      },
+      "turns": [
+        {
+          "content": "今晚想做饭，先给我推荐几道菜"
+        }
+      ],
+      "expectations": {
+        "required_tools": ["recommend_recipes"],
+        "expected_final_stage": "planning",
+        "max_turns": 1
+      },
+      "tags": ["legal_transition", "idea", "planning"]
+    },
+    {
+      "case_id": "transition_02",
+      "suite": "transition_decision",
+      "title": "推荐中没有菜谱时不能进备料",
+      "goal": "当前任务无菜谱时，不应推进到备料。",
+      "initial_state": {
+        "conversation_stage": "planning",
+        "current_task": {
+          "stage": "planning",
+          "recipe_snapshot_preset": "weeknight_omelette"
+        }
+      },
+      "turns": [
+        {
+          "content": "先把当前菜谱清掉，然后直接进入备料吧"
+        }
+      ],
+      "expectations": {
+        "expected_final_stage": "planning",
+        "forbidden_tools": ["advance_to_preparation"],
+        "max_turns": 1
+      },
+      "tags": ["illegal_transition", "planning"]
+    },
+    {
+      "case_id": "transition_03",
+      "suite": "transition_decision",
+      "title": "推荐中有菜谱时合法进备料",
+      "goal": "当前任务已有菜谱时，应合法进入备料阶段。",
+      "initial_state": {
+        "conversation_stage": "planning",
+        "current_task": {
+          "stage": "planning",
+          "recipe_snapshot_preset": "garlic_broccoli"
+        }
+      },
+      "turns": [
+        {
+          "content": "这道菜可以，进入备料"
+        }
+      ],
+      "expectations": {
+        "required_tools": ["advance_to_preparation"],
+        "expected_final_stage": "shopping",
+        "max_turns": 1
+      },
+      "tags": ["legal_transition", "planning", "shopping"]
+    },
+    {
+      "case_id": "transition_04",
+      "suite": "transition_decision",
+      "title": "备料未完成时不能进烹饪",
+      "goal": "必需食材未齐时，阶段不应推进到烹饪。",
+      "initial_state": {
+        "conversation_stage": "shopping",
+        "current_task": {
+          "stage": "shopping",
+          "recipe_snapshot_preset": "air_fryer_fries",
+          "ingredient_overrides": [
+            {"ingredient_name": "土豆", "status": "ready"}
+          ]
+        }
+      },
+      "turns": [
+        {
+          "content": "直接开始做吧"
+        }
+      ],
+      "expectations": {
+        "expected_final_stage": "shopping",
+        "max_turns": 1
+      },
+      "tags": ["illegal_transition", "shopping", "cooking"]
+    },
+    {
+      "case_id": "transition_05",
+      "suite": "transition_decision",
+      "title": "备料完成时应先更新再推进",
+      "goal": "用户说都备齐了时，应先更新状态，再进入烹饪。",
+      "initial_state": {
+        "conversation_stage": "shopping",
+        "current_task": {
+          "stage": "shopping",
+          "recipe_snapshot_preset": "weeknight_omelette"
+        }
+      },
+      "turns": [
+        {
+          "content": "这些都备齐了，开始做吧",
+          "client_card_state": {
+            "pantry_status": {
+              "ready_ingredient_ids": ["ingredient-egg", "ingredient-scallion", "ingredient-salt"],
+              "flash_mode": false
+            }
+          }
+        }
+      ],
+      "expectations": {
+        "required_tools": ["advance_to_cooking"],
+        "tool_order_constraints": [["update_task_recipe_for_preparation", "advance_to_cooking"]],
+        "expected_final_stage": "cooking",
+        "max_turns": 1
+      },
+      "tags": ["shopping", "cooking", "tool_order", "client_card_state", "legal_transition"]
+    },
+    {
+      "case_id": "transition_06",
+      "suite": "transition_decision",
+      "title": "切到烹饪后再展示烹饪卡",
+      "goal": "同轮内如果既要推进到烹饪又要展示烹饪卡，顺序应正确。",
+      "initial_state": {
+        "conversation_stage": "shopping",
+        "current_task": {
+          "stage": "shopping",
+          "recipe_snapshot_preset": "air_fryer_fries",
+          "ingredient_overrides": [
+            {"ingredient_name": "土豆", "status": "ready"},
+            {"ingredient_name": "食用油", "status": "ready"},
+            {"ingredient_name": "盐", "status": "ready"}
+          ]
+        }
+      },
+      "turns": [
+        {
+          "content": "都齐了，切到下一阶段后顺便把做法给我看看"
+        }
+      ],
+      "expectations": {
+        "required_tools": ["advance_to_cooking", "show_cooking_card"],
+        "tool_order_constraints": [["advance_to_cooking", "show_cooking_card"]],
+        "expected_final_stage": "cooking",
+        "max_turns": 1
+      },
+      "tags": ["shopping", "cooking", "tool_order", "legal_transition"]
+    },
+    {
+      "case_id": "transition_07",
+      "suite": "transition_decision",
+      "title": "步骤未完成时不能直接结束任务",
+      "goal": "烹饪步骤未完成时，任务不应被直接完成。",
+      "initial_state": {
+        "conversation_stage": "cooking",
+        "current_task": {
+          "stage": "cooking",
+          "recipe_snapshot_preset": "garlic_broccoli",
+          "ingredient_overrides": [
+            {"ingredient_name": "西兰花", "status": "ready"},
+            {"ingredient_name": "大蒜", "status": "ready"},
+            {"ingredient_name": "盐", "status": "ready"}
+          ]
+        }
+      },
+      "turns": [
+        {
+          "content": "做好啦，直接结束吧"
+        }
+      ],
+      "expectations": {
+        "expected_final_stage": "cooking",
+        "max_turns": 1
+      },
+      "tags": ["illegal_transition", "cooking", "completion_guard"]
+    },
+    {
+      "case_id": "transition_08",
+      "suite": "transition_decision",
+      "title": "步骤全部完成后可以结束任务",
+      "goal": "所有步骤都 done 时，应可合法结束。",
+      "initial_state": {
+        "conversation_stage": "cooking",
+        "current_task": {
+          "stage": "cooking",
+          "recipe_snapshot_preset": "garlic_broccoli",
+          "ingredient_overrides": [
+            {"ingredient_name": "西兰花", "status": "ready"},
+            {"ingredient_name": "大蒜", "status": "ready"},
+            {"ingredient_name": "盐", "status": "ready"}
+          ],
+          "step_overrides": [
+            {"step_no": 1, "status": "done"},
+            {"step_no": 2, "status": "done"},
+            {"step_no": 3, "status": "done"},
+            {"step_no": 4, "status": "done"},
+            {"step_no": 5, "status": "done"}
+          ]
+        }
+      },
+      "turns": [
+        {
+          "content": "都做完了，帮我结束这次任务"
+        }
+      ],
+      "expectations": {
+        "required_tools": ["complete_cooking_task"],
+        "expected_final_stage": "idea",
+        "max_turns": 1
+      },
+      "tags": ["legal_transition", "cooking", "complete"]
+    },
+    {
+      "case_id": "transition_09",
+      "suite": "transition_decision",
+      "title": "烹饪中回滚到备料",
+      "goal": "烹饪中需要回去补食材时，应回滚到备料。",
+      "initial_state": {
+        "conversation_stage": "cooking",
+        "current_task": {
+          "stage": "cooking",
+          "recipe_snapshot_preset": "tomato_egg",
+          "ingredient_overrides": [
+            {"ingredient_name": "番茄", "status": "ready"},
+            {"ingredient_name": "鸡蛋", "status": "ready"},
+            {"ingredient_name": "葱", "status": "ready"}
+          ]
+        }
+      },
+      "turns": [
+        {
+          "content": "我还是先回去重新确认食材"
+        }
+      ],
+      "expectations": {
+        "required_tools": ["rollback_to_preparation"],
+        "expected_final_stage": "shopping",
+        "max_turns": 1
+      },
+      "tags": ["rollback", "cooking", "shopping"]
+    },
+    {
+      "case_id": "transition_10",
+      "suite": "transition_decision",
+      "title": "备料中回滚到推荐",
+      "goal": "备料中想换菜时，应回滚到推荐。",
+      "initial_state": {
+        "conversation_stage": "shopping",
+        "current_task": {
+          "stage": "shopping",
+          "recipe_snapshot_preset": "tomato_egg"
+        }
+      },
+      "turns": [
+        {
+          "content": "我想换一道菜，先回推荐"
+        }
+      ],
+      "expectations": {
+        "required_tools": ["rollback_to_recommendation"],
+        "expected_final_stage": "planning",
+        "max_turns": 1
+      },
+      "tags": ["rollback", "shopping", "planning"]
+    },
+    {
+      "case_id": "transition_11",
+      "suite": "transition_decision",
+      "title": "推荐中取消任务不保留活动任务",
+      "goal": "推荐阶段取消后，应回到 idea 且无活动任务。",
+      "initial_state": {
+        "conversation_stage": "planning",
+        "current_task": {
+          "stage": "planning",
+          "recipe_snapshot_preset": "weeknight_omelette"
+        }
+      },
+      "turns": [
+        {
+          "content": "取消这次推荐"
+        }
+      ],
+      "expectations": {
+        "required_tools": ["cancel_recommendation_task"],
+        "expected_final_stage": "idea",
+        "expected_task_assertions": {
+          "current_task_exists": false
+        },
+        "max_turns": 1
+      },
+      "tags": ["cancel", "planning"]
+    },
+    {
+      "case_id": "transition_12",
+      "suite": "transition_decision",
+      "title": "备料中取消任务",
+      "goal": "备料阶段取消后，应回到 idea。",
+      "initial_state": {
+        "conversation_stage": "shopping",
+        "current_task": {
+          "stage": "shopping",
+          "recipe_snapshot_preset": "weeknight_omelette"
+        }
+      },
+      "turns": [
+        {
+          "content": "取消这次备料任务"
+        }
+      ],
+      "expectations": {
+        "required_tools": ["cancel_preparation_task"],
+        "expected_final_stage": "idea",
+        "expected_task_assertions": {
+          "current_task_exists": false
+        },
+        "max_turns": 1
+      },
+      "tags": ["cancel", "shopping"]
+    },
+    {
+      "case_id": "transition_13",
+      "suite": "transition_decision",
+      "title": "烹饪中取消任务",
+      "goal": "烹饪阶段取消后，应回到 idea。",
+      "initial_state": {
+        "conversation_stage": "cooking",
+        "current_task": {
+          "stage": "cooking",
+          "recipe_snapshot_preset": "weeknight_omelette",
+          "ingredient_overrides": [
+            {"ingredient_name": "鸡蛋", "status": "ready"},
+            {"ingredient_name": "葱花", "status": "ready"},
+            {"ingredient_name": "盐", "status": "ready"}
+          ]
+        }
+      },
+      "turns": [
+        {
+          "content": "取消这次烹饪任务"
+        }
+      ],
+      "expectations": {
+        "required_tools": ["cancel_cooking_task"],
+        "expected_final_stage": "idea",
+        "expected_task_assertions": {
+          "current_task_exists": false
+        },
+        "max_turns": 1
+      },
+      "tags": ["cancel", "cooking"]
+    },
+    {
+      "case_id": "transition_14",
+      "suite": "transition_decision",
+      "title": "先选菜再展示当前任务详情",
+      "goal": "选菜后再展示详情时，应先复制菜谱再展示。",
+      "initial_state": {
+        "conversation_stage": "planning",
+        "current_task": {
+          "stage": "planning",
+          "recipe_snapshot_preset": "garlic_broccoli"
+        }
+      },
+      "turns": [
+        {
+          "content": "我就想试第一道，然后把详情也给我看看",
+          "action": {
+            "action_type": "try_recipe",
+            "payload": {
+              "recipe_id": "$catalog:first_id"
+            }
+          }
+        }
+      ],
+      "expectations": {
+        "required_tools": ["create_or_update_task_recipe"],
+        "tool_order_constraints": [["create_or_update_task_recipe", "show_recipe_detail_card"]],
+        "expected_final_stage": "planning",
+        "max_turns": 1
+      },
+      "tags": ["planning", "tool_order", "card_action"]
+    },
+    {
+      "case_id": "transition_15",
+      "suite": "transition_decision",
+      "title": "备料更新后再展示备料卡",
+      "goal": "同轮既更新备料状态又展示卡片时，应先更新再展示。",
+      "initial_state": {
+        "conversation_stage": "shopping",
+        "current_task": {
+          "stage": "shopping",
+          "recipe_snapshot_preset": "tomato_egg"
+        }
+      },
+      "turns": [
+        {
+          "content": "番茄和鸡蛋都备好了，再把清单给我看一下"
+        }
+      ],
+      "expectations": {
+        "required_tools": ["update_task_recipe_for_preparation", "show_pantry_card"],
+        "tool_order_constraints": [["update_task_recipe_for_preparation", "show_pantry_card"]],
+        "expected_final_stage": "shopping",
+        "max_turns": 1
+      },
+      "tags": ["shopping", "tool_order"]
+    },
+    {
+      "case_id": "transition_16",
+      "suite": "transition_decision",
+      "title": "烹饪步骤更新后再展示步骤卡",
+      "goal": "同轮既更新步骤又展示步骤卡时，应先更新再展示。",
+      "initial_state": {
+        "conversation_stage": "cooking",
+        "current_task": {
+          "stage": "cooking",
+          "recipe_snapshot_preset": "air_fryer_fries",
+          "ingredient_overrides": [
+            {"ingredient_name": "土豆", "status": "ready"},
+            {"ingredient_name": "食用油", "status": "ready"},
+            {"ingredient_name": "盐", "status": "ready"}
+          ]
+        }
+      },
+      "turns": [
+        {
+          "content": "第三步做完了，再把现在的步骤卡给我看看"
+        }
+      ],
+      "expectations": {
+        "required_tools": ["update_task_recipe_for_cooking", "show_cooking_card"],
+        "tool_order_constraints": [["update_task_recipe_for_cooking", "show_cooking_card"]],
+        "expected_final_stage": "cooking",
+        "max_turns": 1
+      },
+      "tags": ["cooking", "tool_order"]
+    },
+    {
+      "case_id": "transition_17",
+      "suite": "transition_decision",
+      "title": "普通闲聊不应误触取消或回滚",
+      "goal": "闲聊时不应无故调用取消或回滚类工具。",
+      "initial_state": {
+        "conversation_stage": "idea"
+      },
+      "turns": [
+        {
+          "content": "你今天心情怎么样"
+        }
+      ],
+      "expectations": {
+        "forbidden_tools": [
+          "cancel_recommendation_task",
+          "cancel_preparation_task",
+          "cancel_cooking_task",
+          "rollback_to_recommendation",
+          "rollback_to_preparation"
+        ],
+        "expected_final_stage": "idea",
+        "max_turns": 1
+      },
+      "tags": ["idea", "guardrail"]
+    },
+    {
+      "case_id": "transition_18",
+      "suite": "transition_decision",
+      "title": "围绕当前步骤提问不应误切阶段",
+      "goal": "用户只是在烹饪中提问时，不应误触回滚或完成。",
+      "initial_state": {
+        "conversation_stage": "cooking",
+        "current_task": {
+          "stage": "cooking",
+          "recipe_snapshot_preset": "air_fryer_fries",
+          "ingredient_overrides": [
+            {"ingredient_name": "土豆", "status": "ready"},
+            {"ingredient_name": "食用油", "status": "ready"},
+            {"ingredient_name": "盐", "status": "ready"}
+          ],
+          "step_overrides": [
+            {"step_no": 1, "status": "done"},
+            {"step_no": 2, "status": "done"},
+            {"step_no": 3, "status": "done"},
+            {"step_no": 4, "status": "current"},
+            {"step_no": 5, "status": "pending"}
+          ]
+        }
+      },
+      "turns": [
+        {
+          "content": "这一步火候要多大？",
+          "client_card_state": {
+            "cooking_guide": {
+              "current_step": 4,
+              "focused_step_id": "step-4",
+              "flash_mode": false
+            }
+          }
+        }
+      ],
+      "expectations": {
+        "forbidden_tools": ["rollback_to_preparation", "complete_cooking_task"],
+        "expected_final_stage": "cooking",
+        "max_turns": 1
+      },
+      "tags": ["cooking", "guardrail", "client_card_state"]
+    }
+  ]
+}

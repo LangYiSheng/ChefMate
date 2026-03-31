@@ -1,0 +1,2461 @@
+{
+  "run_id": "20260331_211722_6be6a2",
+  "dataset": "agent_core_v1",
+  "suite": "all",
+  "case_filter": null,
+  "construction_method": "手工场景集",
+  "dataset_overview": {
+    "total_cases": 58,
+    "suite_counts": {
+      "end_to_end": 12,
+      "stage_capability": 28,
+      "transition_decision": 18
+    },
+    "coverage_tags": [
+      "advance",
+      "attachment",
+      "cancel",
+      "card_action",
+      "catalog_recipe",
+      "client_card_state",
+      "complete",
+      "completion_attempt",
+      "completion_guard",
+      "cooking",
+      "cooking_card",
+      "detail_card",
+      "end_to_end",
+      "generated_recipe",
+      "guardrail",
+      "guided_cooking",
+      "idea",
+      "illegal_transition",
+      "image",
+      "ingredient_query",
+      "legal_transition",
+      "memory_update",
+      "next_step",
+      "pantry_card",
+      "planning",
+      "recommendation",
+      "recommendation_refine",
+      "rollback",
+      "shopping",
+      "smalltalk",
+      "state_awareness",
+      "step_detail",
+      "step_focus",
+      "text_only",
+      "tool_order",
+      "update_recipe"
+    ],
+    "tag_counts": {
+      "end_to_end": 12,
+      "catalog_recipe": 2,
+      "card_action": 5,
+      "client_card_state": 7,
+      "generated_recipe": 3,
+      "step_focus": 1,
+      "rollback": 5,
+      "cancel": 8,
+      "shopping": 18,
+      "cooking": 20,
+      "detail_card": 3,
+      "advance": 4,
+      "recommendation_refine": 2,
+      "completion_attempt": 1,
+      "image": 2,
+      "attachment": 2,
+      "idea": 6,
+      "recommendation": 2,
+      "text_only": 1,
+      "ingredient_query": 1,
+      "smalltalk": 1,
+      "memory_update": 1,
+      "planning": 14,
+      "update_recipe": 3,
+      "pantry_card": 2,
+      "state_awareness": 1,
+      "step_detail": 2,
+      "cooking_card": 2,
+      "next_step": 1,
+      "complete": 2,
+      "guided_cooking": 1,
+      "legal_transition": 5,
+      "illegal_transition": 3,
+      "tool_order": 5,
+      "completion_guard": 1,
+      "guardrail": 2
+    },
+    "has_client_card_state_cases": true,
+    "has_card_action_cases": true,
+    "has_rollback_cases": true,
+    "has_cancel_cases": true,
+    "has_illegal_transition_cases": true
+  },
+  "overall_metrics": {
+    "case_pass_rate": 0.8621,
+    "required_tool_hit_rate": 0.9655,
+    "forbidden_tool_violation_rate": 0.0,
+    "tool_order_compliance_rate": 0.9655,
+    "final_stage_accuracy": 0.8793,
+    "task_state_assertion_pass_rate": 1.0,
+    "end_to_end_completion_rate": 0.8333,
+    "error_free_run_rate": 1.0,
+    "llm_average_score": 4.4397
+  },
+  "suite_metrics": {
+    "end_to_end": {
+      "case_pass_rate": 0.8333,
+      "required_tool_hit_rate": 0.8333,
+      "forbidden_tool_violation_rate": 0.0,
+      "tool_order_compliance_rate": 1.0,
+      "final_stage_accuracy": 0.8333,
+      "task_state_assertion_pass_rate": 1.0,
+      "end_to_end_completion_rate": 0.8333,
+      "error_free_run_rate": 1.0,
+      "llm_average_score": 4.375
+    },
+    "stage_capability": {
+      "case_pass_rate": 0.9286,
+      "required_tool_hit_rate": 1.0,
+      "forbidden_tool_violation_rate": 0.0,
+      "tool_order_compliance_rate": 1.0,
+      "final_stage_accuracy": 0.9286,
+      "task_state_assertion_pass_rate": 1.0,
+      "end_to_end_completion_rate": 0.0,
+      "error_free_run_rate": 1.0,
+      "llm_average_score": 4.5
+    },
+    "transition_decision": {
+      "case_pass_rate": 0.7778,
+      "required_tool_hit_rate": 1.0,
+      "forbidden_tool_violation_rate": 0.0,
+      "tool_order_compliance_rate": 0.8889,
+      "final_stage_accuracy": 0.8333,
+      "task_state_assertion_pass_rate": 1.0,
+      "end_to_end_completion_rate": 0.0,
+      "error_free_run_rate": 1.0,
+      "llm_average_score": 4.3889
+    }
+  },
+  "cases": [
+    {
+      "case_id": "e2e_01",
+      "suite": "end_to_end",
+      "title": "目录菜谱从推荐进入备料",
+      "goal": "从推荐中选择目录菜谱，并基于卡片状态尝试继续推进任务。",
+      "tags": [
+        "end_to_end",
+        "catalog_recipe",
+        "card_action",
+        "client_card_state"
+      ],
+      "passed": false,
+      "skipped": false,
+      "rule_result": {
+        "passed": false,
+        "failures": [
+          "最终阶段不匹配：期望 shopping，实际 cooking",
+          "Turn 2: 本轮阶段不匹配：期望 planning，实际 shopping",
+          "Turn 3: 本轮缺少必需工具：advance_to_preparation"
+        ],
+        "metrics": {
+          "required_tools_ok": false,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": false,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": false
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "该回复准确感知用户已备齐食材要开始烹饪的需求，清晰给出咖喱炒蟹的第一步操作指引，内容具体实用，表述友好准确。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"该回复准确感知用户已备齐食材要开始烹饪的需求，清晰给出咖喱炒蟹的第一步操作指引，内容具体实用，表述友好准确。\"\n}"
+      },
+      "final_assistant_reply": "🥳太棒啦，咱们现在正式进入咖喱炒蟹的烹饪阶段咯，已经给你调出烹饪步骤卡啦，第一步咱们先来处理肉蟹：\n把肉蟹掀盖后对半砍开，蟹钳用刀背轻轻拍裂，切口和蟹钳蘸一点点生粉就好（不要蘸太多哦），再往蟹盖里撒5g生粉盖住蟹黄，就可以放一边备用啦～\n这步做完了随时告诉我哦😉"
+    },
+    {
+      "case_id": "e2e_02",
+      "suite": "end_to_end",
+      "title": "现写菜谱后进入备料",
+      "goal": "用户描述想法后由模型创建菜谱并推进到备料阶段。",
+      "tags": [
+        "end_to_end",
+        "generated_recipe"
+      ],
+      "passed": false,
+      "skipped": false,
+      "rule_result": {
+        "passed": false,
+        "failures": [
+          "缺少必需工具：advance_to_preparation",
+          "最终阶段不匹配：期望 shopping，实际 planning"
+        ],
+        "metrics": {
+          "required_tools_ok": false,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": false,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": false
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 1,
+          "instruction_fidelity": 1,
+          "practical_helpfulness": 1,
+          "honesty_constraint_respect": 1
+        },
+        "average_score": 1.0,
+        "summary": "回复完全未把握对话上下文与用户需求，既未生成符合要求的清淡快手家常菜菜谱，也未推进到备料阶段，还虚构不存在的菜品选项询问用户，毫无实际作用。",
+        "raw_text": "{\n    \"state_awareness\": 1,\n    \"instruction_fidelity\": 1,\n    \"practical_helpfulness\": 1,\n    \"honesty_constraint_respect\": 1,\n    \"summary\": \"回复完全未把握对话上下文与用户需求，既未生成符合要求的清淡快手家常菜菜谱，也未推进到备料阶段，还虚构不存在的菜品选项询问用户，毫无实际作用。\"\n}"
+      },
+      "final_assistant_reply": "请问你选的是溏心蛋、杨枝甘露还是金菲士呀？我帮你生成对应的菜谱之后就可以进入备料阶段啦😉"
+    },
+    {
+      "case_id": "e2e_03",
+      "suite": "end_to_end",
+      "title": "围绕当前步骤继续追问",
+      "goal": "用户切到后面步骤后继续追问时，应持续围绕当前步骤。",
+      "tags": [
+        "end_to_end",
+        "client_card_state",
+        "step_focus"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": true
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 3,
+          "instruction_fidelity": 2,
+          "practical_helpfulness": 3,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 3.25,
+        "summary": "助手准确知晓当前烹饪处于第4步，回复的第5步操作内容正确，但未回应用户询问当前步骤详情的需求，也未引导用户先完成当前步骤，不符合需围绕当前步骤回复的要求。",
+        "raw_text": "{\n    \"state_awareness\": 3,\n    \"instruction_fidelity\": 2,\n    \"practical_helpfulness\": 3,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"助手准确知晓当前烹饪处于第4步，回复的第5步操作内容正确，但未回应用户询问当前步骤详情的需求，也未引导用户先完成当前步骤，不符合需围绕当前步骤回复的要求。\"\n}"
+      },
+      "final_assistant_reply": "下一步就是炸薯条的核心步骤啦😉：\n### 第5步 「炸至金黄」\n把预热好的空气炸锅炸篮抽出来，将拌好的薯条均匀平铺在篮里（不要堆叠哦，受热会更均匀），设置180℃烤12-15分钟，中途记得翻面一次，就能得到外脆里糯的薯条啦~\n\n我也把烹饪步骤卡帮你调出来啦，可以直接跟着卡片走哦。"
+    },
+    {
+      "case_id": "e2e_04",
+      "suite": "end_to_end",
+      "title": "备料回滚再继续",
+      "goal": "用户中途想换菜，回滚后重新继续。",
+      "tags": [
+        "end_to_end",
+        "rollback"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": true
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 3,
+          "instruction_fidelity": 3,
+          "practical_helpfulness": 2,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 3.25,
+        "summary": "助理识别到用户需要回滚推荐、获取清淡口味餐食的需求，但误将蔗糖糖浆、莫吉托等非菜品归类为菜品推荐，仅太阳蛋符合用户寻找清淡菜品的诉求，实际帮助有限。",
+        "raw_text": "{\n  \"state_awareness\": 3,\n  \"instruction_fidelity\": 3,\n  \"practical_helpfulness\": 2,\n  \"honesty_constraint_respect\": 5,\n  \"summary\": \"助理识别到用户需要回滚推荐、获取清淡口味餐食的需求，但误将蔗糖糖浆、莫吉托等非菜品归类为菜品推荐，仅太阳蛋符合用户寻找清淡菜品的诉求，实际帮助有限。\"\n}"
+      },
+      "final_assistant_reply": "好哒~这就给你安排上清淡口的菜谱推荐😋 已经为你找到这些合适的菜品：\n- 太阳蛋：5分钟快手菜，咸鲜清淡，用微波炉就能做\n- 蔗糖糖浆：5分钟就能做好，清淡口味，家常好操作\n- 莫吉托：10分钟搞定，清爽清淡，很适合一人食\n\n有没有你感兴趣的呀？要是不符合你的需求也可以告诉我你其他的偏好哦~"
+    },
+    {
+      "case_id": "e2e_05",
+      "suite": "end_to_end",
+      "title": "备料中取消",
+      "goal": "多轮后在备料阶段取消任务。",
+      "tags": [
+        "end_to_end",
+        "cancel",
+        "shopping"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": true
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "回复准确捕捉用户取消任务的诉求，顺利完成取消操作，语气友好，同时告知后续可提供的服务，满足各项要求。",
+        "raw_text": "{\n  \"state_awareness\": 5,\n  \"instruction_fidelity\": 5,\n  \"practical_helpfulness\": 5,\n  \"honesty_constraint_respect\": 5,\n  \"summary\": \"回复准确捕捉用户取消任务的诉求，顺利完成取消操作，语气友好，同时告知后续可提供的服务，满足各项要求。\"\n}"
+      },
+      "final_assistant_reply": "好哒～这次的任务已经帮你取消啦😉要是之后想找菜谱、学做菜随时招呼我就行哦～"
+    },
+    {
+      "case_id": "e2e_06",
+      "suite": "end_to_end",
+      "title": "烹饪中取消",
+      "goal": "多轮后在烹饪阶段取消任务。",
+      "tags": [
+        "end_to_end",
+        "cancel",
+        "cooking"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": true
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "回复准确响应用户取消烹饪任务的需求，态度友好，实用性强，未出现违规内容。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"回复准确响应用户取消烹饪任务的需求，态度友好，实用性强，未出现违规内容。\"\n}"
+      },
+      "final_assistant_reply": "好哒，本次烹饪任务已经帮你取消啦😘 什么时候想研究新菜或者准备下厨了随时喊我就行哦～"
+    },
+    {
+      "case_id": "e2e_07",
+      "suite": "end_to_end",
+      "title": "先看详情再进入备料",
+      "goal": "用户先看详情，再决定开始备料。",
+      "tags": [
+        "end_to_end",
+        "detail_card"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": true
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "助手准确响应了用户开启备料的需求，清晰列出蒜香西兰花的备料食材清单，引导用户备料完成后进入烹饪步骤，回复实用且符合流程要求。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"助手准确响应了用户开启备料的需求，清晰列出蒜香西兰花的备料食材清单，引导用户备料完成后进入烹饪步骤，回复实用且符合流程要求。\"\n}"
+      },
+      "final_assistant_reply": "好哒🥰 咱们现在已经进入「蒜香西兰花」的备料阶段啦，需要准备的食材都在清单里哦：\n- 1颗西兰花\n- 3瓣大蒜\n- 少许盐\n\n等你把这些食材都准备好，随时告诉我就可以进入烹饪步骤啦~"
+    },
+    {
+      "case_id": "e2e_08",
+      "suite": "end_to_end",
+      "title": "生成菜谱后进入备料并尝试继续推进",
+      "goal": "模型创建菜谱后，先进入备料，再根据用户输入尝试继续推进。",
+      "tags": [
+        "end_to_end",
+        "generated_recipe",
+        "advance"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": true
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "回复准确识别到米饭尚未备齐的备料进度，告知用户需先准备好米饭再推进烹饪流程，表述清晰实用，符合当前阶段的任务要求。",
+        "raw_text": "{\n  \"state_awareness\": 5,\n  \"instruction_fidelity\": 5,\n  \"practical_helpfulness\": 5,\n  \"honesty_constraint_respect\": 5,\n  \"summary\": \"回复准确识别到米饭尚未备齐的备料进度，告知用户需先准备好米饭再推进烹饪流程，表述清晰实用，符合当前阶段的任务要求。\"\n}"
+      },
+      "final_assistant_reply": "😊 差点漏啦，现在还差1碗用来搭配的米饭还没准备好哦~ 你把米饭蒸上备齐之后，跟我说一声我们就可以马上开始做空气炸锅照烧鸡啦😉"
+    },
+    {
+      "case_id": "e2e_09",
+      "suite": "end_to_end",
+      "title": "推荐不满意后再次细化",
+      "goal": "用户对第一轮推荐不满意时，应继续推荐而不是卡住。",
+      "tags": [
+        "end_to_end",
+        "recommendation_refine"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": true
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "回复准确捕捉到用户对首轮推荐不满、需要清淡快手晚餐的需求，推荐的菜品标注清晰实用，还提供了后续调整选项，响应十分到位。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"回复准确捕捉到用户对首轮推荐不满、需要清淡快手晚餐的需求，推荐的菜品标注清晰实用，还提供了后续调整选项，响应十分到位。\"\n}"
+      },
+      "final_assistant_reply": "好的~帮你筛选了清淡快手的选项哦，正餐优先推荐：\n1. **菠菜炒鸡蛋**⏱️15分钟 简单难度\n   咸鲜清淡，营养好操作，是非常经典的快手家常菜\n\n另外还有两道5分钟就能做好的清淡小食，想吃点清爽的也可以选：\n2. **蔗糖糖浆**⏱️5分钟 简单难度\n   清淡口的自制基础糖浆，配饮品、拌凉品都能用\n3. **砂糖椰子冰沙**⏱️5分钟 简单难度\n   清爽解腻，几分钟就能做好的冰爽小甜品\n\n你看看有没有想吃的呀？想要其他正餐类的我也可以再调整哦~"
+    },
+    {
+      "case_id": "e2e_10",
+      "suite": "end_to_end",
+      "title": "通过卡片动作从备料推进烹饪",
+      "goal": "用户通过卡片语义动作触发推进，应完成从备料到烹饪的迁移。",
+      "tags": [
+        "end_to_end",
+        "card_action",
+        "shopping",
+        "cooking"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": true
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "助理准确识别用户备料完成的触发动作，成功将流程从备料阶段推进到烹饪阶段，清晰告知当前操作步骤、操作要点及后续安排，内容准确实用。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"助理准确识别用户备料完成的触发动作，成功将流程从备料阶段推进到烹饪阶段，清晰告知当前操作步骤、操作要点及后续安排，内容准确实用。\"\n}"
+      },
+      "final_assistant_reply": "太好了，所有食材都准备妥当啦😉 现在正式进入空气炸锅薯条的烹饪环节：\n\n当前第一步👉 **切薯条**：把土豆去皮后切成粗细均匀的条状，尽量切得大小差不多，后续受热会更均匀哦，切的时候注意安全呀~\n\n等你切完就可以进行下一步「冷水浸泡沥干」的操作啦，有不清楚的随时告诉我~"
+    },
+    {
+      "case_id": "e2e_11",
+      "suite": "end_to_end",
+      "title": "逐步完成后结束烹饪",
+      "goal": "先更新当前步骤，再在最后一步完成后正确结束任务。",
+      "tags": [
+        "end_to_end",
+        "cooking",
+        "completion_attempt"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": true
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "回复准确识别用户已完成全部烹饪步骤并申请结束的需求，友好送上祝贺并告知后续可提供相关服务，符合各项要求，表现优异。",
+        "raw_text": "{\n  \"state_awareness\": 5,\n  \"instruction_fidelity\": 5,\n  \"practical_helpfulness\": 5,\n  \"honesty_constraint_respect\": 5,\n  \"summary\": \"回复准确识别用户已完成全部烹饪步骤并申请结束的需求，友好送上祝贺并告知后续可提供相关服务，符合各项要求，表现优异。\"\n}"
+      },
+      "final_assistant_reply": "太棒啦！恭喜你顺利完成这道菜~做得超棒的😋 下次想找菜谱或者学做新菜随时喊我哦~"
+    },
+    {
+      "case_id": "e2e_12",
+      "suite": "end_to_end",
+      "title": "图片辅助推荐",
+      "goal": "用户发图后，应能结合图片识别进入推荐流程。",
+      "tags": [
+        "end_to_end",
+        "image",
+        "attachment"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": true
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "回复准确识别出用户拍摄的冰箱内食材，顺利推进菜谱推荐流程，充分匹配用户需求。",
+        "raw_text": "{\n  \"state_awareness\": 5,\n  \"instruction_fidelity\": 5,\n  \"practical_helpfulness\": 5,\n  \"honesty_constraint_respect\": 5,\n  \"summary\": \"回复准确识别出用户拍摄的冰箱内食材，顺利推进菜谱推荐流程，充分匹配用户需求。\"\n}"
+      },
+      "final_assistant_reply": "已经帮你识别到冰箱里的食材啦：豆角、米饭、青豆、胡萝卜、土豆、生菜、番茄、芹菜、葱、三文鱼、虾、蟹、金针菇😉\n结合这些食材给你推荐了以下菜谱，看看有没有想吃的呀~"
+    },
+    {
+      "case_id": "stage_idea_01",
+      "suite": "stage_capability",
+      "title": "无任务阶段触发晚餐推荐",
+      "goal": "用户想要晚餐推荐时，应进入推荐中并给出候选。",
+      "tags": [
+        "idea",
+        "recommendation",
+        "text_only"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "助手准确响应用户的快手晚餐推荐需求，提供了多款符合要求的候选菜品，信息实用、引导友好，完全符合预期。",
+        "raw_text": "{\n  \"state_awareness\": 5,\n  \"instruction_fidelity\": 5,\n  \"practical_helpfulness\": 5,\n  \"honesty_constraint_respect\": 5,\n  \"summary\": \"助手准确响应用户的快手晚餐推荐需求，提供了多款符合要求的候选菜品，信息实用、引导友好，完全符合预期。\"\n}"
+      },
+      "final_assistant_reply": "好哒😉 给你找了几道超适合今晚的快手家常菜，都是十几分钟就能搞定的：\n1. 煮速冻水饺：15分钟就能做好，简单省事，咸鲜口\n2. 猪油拌饭：只要5分钟！香到舔碗的快手选项，带葱香咸鲜风味\n3. 西红柿鸡蛋汤：15分钟搞定，清淡鲜爽还带点酸甜，喝着很舒服\n\n你看看有没有想吃的呀？要是都不满意也可以告诉我你想吃啥口味或者手边有啥食材，我再给你找~"
+    },
+    {
+      "case_id": "stage_idea_02",
+      "suite": "stage_capability",
+      "title": "无任务阶段按冰箱食材推荐",
+      "goal": "用户说出冰箱里的食材后，应进入推荐中并调用推荐工具。",
+      "tags": [
+        "idea",
+        "recommendation",
+        "ingredient_query"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "助手准确理解用户需要用冰箱现有食材推荐快手菜的需求，推荐了适配的番茄炒蛋，标注了制作时长和口味特点，内容实用且引导后续操作，回应友好。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"助手准确理解用户需要用冰箱现有食材推荐快手菜的需求，推荐了适配的番茄炒蛋，标注了制作时长和口味特点，内容实用且引导后续操作，回应友好。\"\n}"
+      },
+      "final_assistant_reply": "给你推荐最经典的番茄炒蛋哦😉 刚好能用你冰箱里的番茄和鸡蛋，全程只要15分钟，咸香带点酸甜特别下饭，要不要就选这道菜开始做呀？"
+    },
+    {
+      "case_id": "stage_idea_03",
+      "suite": "stage_capability",
+      "title": "无任务阶段普通闲聊",
+      "goal": "普通闲聊不应强行进入任务。",
+      "tags": [
+        "idea",
+        "smalltalk"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "该回复精准契合无任务闲聊阶段的定位，真诚共情用户的疲惫情绪，没有强行推进菜谱相关任务，还贴心预留了后续服务入口，回应质量优秀。",
+        "raw_text": "{\n  \"state_awareness\": 5,\n  \"instruction_fidelity\": 5,\n  \"practical_helpfulness\": 5,\n  \"honesty_constraint_respect\": 5,\n  \"summary\": \"该回复精准契合无任务闲聊阶段的定位，真诚共情用户的疲惫情绪，没有强行推进菜谱相关任务，还贴心预留了后续服务入口，回应质量优秀。\"\n}"
+      },
+      "final_assistant_reply": "辛苦啦😔 上了一天班肯定超累的，要不要先瘫在沙发上歇会儿呀？是今天遇到什么烦心事了，还是单纯干活/通勤耗了太多精力呀？\n等你缓过来要是想吃点简单省心、吃了又舒服的东西，随时和我说，我给你找最省事儿的菜谱~"
+    },
+    {
+      "case_id": "stage_idea_04",
+      "suite": "stage_capability",
+      "title": "无任务阶段更新偏好记忆",
+      "goal": "用户明确要求记住偏好时，应更新长期记忆。",
+      "tags": [
+        "idea",
+        "memory_update"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "助手准确响应了用户记录偏好的需求，明确告知已完成记录且后续推荐菜谱会优先匹配清淡低油的要求，回复质量优秀。",
+        "raw_text": "{\n  \"state_awareness\": 5,\n  \"instruction_fidelity\": 5,\n  \"practical_helpfulness\": 5,\n  \"honesty_constraint_respect\": 5,\n  \"summary\": \"助手准确响应了用户记录偏好的需求，明确告知已完成记录且后续推荐菜谱会优先匹配清淡低油的要求，回复质量优秀。\"\n}"
+      },
+      "final_assistant_reply": "好哒😉已经帮你记下来啦，之后给你推荐菜谱的时候会优先选清淡低油的做法哦~"
+    },
+    {
+      "case_id": "stage_planning_01",
+      "suite": "stage_capability",
+      "title": "推荐中继续要更清淡的候选",
+      "goal": "推荐中用户继续细化需求时，应再次调用推荐工具。",
+      "tags": [
+        "planning",
+        "recommendation_refine"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 3,
+          "instruction_fidelity": 2,
+          "practical_helpfulness": 3,
+          "honesty_constraint_respect": 4
+        },
+        "average_score": 3.0,
+        "summary": "助手能够识别用户需要三道更清淡菜品的需求，给出的菜品推荐具备一定实用参考价值，但未按照流程要求调用推荐工具，对任务执行规范的遵循度不足。",
+        "raw_text": "{\n    \"state_awareness\": 3,\n    \"instruction_fidelity\": 2,\n    \"practical_helpfulness\": 3,\n    \"honesty_constraint_respect\": 4,\n    \"summary\": \"助手能够识别用户需要三道更清淡菜品的需求，给出的菜品推荐具备一定实用参考价值，但未按照流程要求调用推荐工具，对任务执行规范的遵循度不足。\"\n}"
+      },
+      "final_assistant_reply": "好呀～这三道清淡快手的菜品很适合哦👇\n1. 太阳蛋：5分钟就能做好，清淡咸鲜，用微波炉就能做超快手\n2. 鸡蛋花：5分钟搞定，清淡口家常味，做法超简单\n3. 燕麦鸡蛋饼：10分钟完成，香软清淡，饱腹感也不错\n\n你看上哪道啦？我给你看详细做法哦😉"
+    },
+    {
+      "case_id": "stage_planning_02",
+      "suite": "stage_capability",
+      "title": "推荐中通过卡片动作查看详情",
+      "goal": "点击查看详情后，应展示菜谱详情卡。",
+      "tags": [
+        "planning",
+        "card_action",
+        "detail_card"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "助理准确响应了查看菜谱详情的操作请求，提供的快手葱花煎蛋菜谱信息完整实用，符合预期要求。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"助理准确响应了查看菜谱详情的操作请求，提供的快手葱花煎蛋菜谱信息完整实用，符合预期要求。\"\n}"
+      },
+      "final_assistant_reply": "好哒，这就为你展示这道菜的详细做法哦👇"
+    },
+    {
+      "case_id": "stage_planning_03",
+      "suite": "stage_capability",
+      "title": "推荐中通过卡片动作选择菜谱",
+      "goal": "点击想尝试后，应把菜谱复制进当前任务。",
+      "tags": [
+        "planning",
+        "card_action",
+        "catalog_recipe"
+      ],
+      "passed": false,
+      "skipped": false,
+      "rule_result": {
+        "passed": false,
+        "failures": [
+          "最终阶段不匹配：期望 planning，实际 shopping"
+        ],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": false,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 1,
+          "instruction_fidelity": 1,
+          "practical_helpfulness": 1,
+          "honesty_constraint_respect": 1
+        },
+        "average_score": 1.0,
+        "summary": "助手未正确识别用户选择的咖喱炒蟹菜谱，错误回复快手葱花煎蛋的备料信息，所处阶段也不符合预期，回复完全错误无法为用户提供有效帮助。",
+        "raw_text": "{\n    \"state_awareness\": 1,\n    \"instruction_fidelity\": 1,\n    \"practical_helpfulness\": 1,\n    \"honesty_constraint_respect\": 1,\n    \"summary\": \"助手未正确识别用户选择的咖喱炒蟹菜谱，错误回复快手葱花煎蛋的备料信息，所处阶段也不符合预期，回复完全错误无法为用户提供有效帮助。\"\n}"
+      },
+      "final_assistant_reply": "好呀😉 现在已经进入「快手葱花煎蛋」的备料阶段啦，需要准备的食材有：\n🥚 鸡蛋2个\n🌱 葱花1小把\n🧂 盐少许\n\n你可以把准备好的食材勾选上，全部备齐后就可以开始烹饪啦~"
+    },
+    {
+      "case_id": "stage_planning_04",
+      "suite": "stage_capability",
+      "title": "推荐中按描述创建新菜谱",
+      "goal": "用户要现写一道菜时，应创建生成菜谱。",
+      "tags": [
+        "planning",
+        "generated_recipe"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "助手准确捕捉用户对空气炸锅酸甜口简易晚餐菜谱的需求，在系统创建自定义菜谱出错的情况下，提供了内容详实、可操作性强的对应菜谱，完全符合用户诉求。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"助手准确捕捉用户对空气炸锅酸甜口简易晚餐菜谱的需求，在系统创建自定义菜谱出错的情况下，提供了内容详实、可操作性强的对应菜谱，完全符合用户诉求。\"\n}"
+      },
+      "final_assistant_reply": "不好意思呀，刚刚系统创建自定义菜谱临时出了点小问题，我直接把你要的空气炸锅酸甜口简单晚餐菜谱写给你哦😉\n\n### 🍖 空气炸锅糖醋鸡胸肉\n⏰ 总耗时：25分钟 | 难度：简单 | 2人份\n特点：酸甜开胃少油，超下饭~\n\n#### 🥬 食材清单：\n- 鸡胸肉 200g\n- 料酒 1勺\n- 生抽 2勺\n- 白醋 2勺\n- 白砂糖 2勺\n- 玉米淀粉 1勺\n- 番茄酱 1勺\n- 白芝麻 少许（可选）\n\n#### 👩🍳 制作步骤：\n1. **腌制鸡胸肉**：鸡胸肉切成1厘米见方的小块，加1勺料酒、1勺生抽、半勺淀粉抓匀，腌制10分钟\n2. **第一次烤制**：空气炸锅铺油纸刷薄油，把鸡胸肉均匀铺好，180度烤12分钟，中途翻面一次\n3. **调糖醋汁**：等待烤制的时间调汁：1勺生抽、2勺白醋、2勺糖、1勺番茄酱、半勺淀粉加3勺清水搅匀\n4. **裹汁二次烤制**：烤好的鸡胸肉淋上糖醋汁翻拌均匀，放回空气炸锅180度再烤3分钟\n5. **出锅**：撒上少许白芝麻就可以吃啦\n\n💡 小提示：喜欢更酸更甜可以调整糖醋比例，鸡胸肉切小块更容易入味哦~\n\n如果你觉得这个菜谱合适，我可以帮你推进到备料阶段哦😘"
+    },
+    {
+      "case_id": "stage_planning_05",
+      "suite": "stage_capability",
+      "title": "推荐中展示当前任务菜谱详情",
+      "goal": "当前任务已有菜谱时，可展示详情卡。",
+      "tags": [
+        "planning",
+        "detail_card"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "回复正确响应用户查看菜谱详情的请求，告知番茄炒蛋详情卡已展示，贴合当前规划阶段的场景友好引导后续操作，无违规内容，质量优秀。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"回复正确响应用户查看菜谱详情的请求，告知番茄炒蛋详情卡已展示，贴合当前规划阶段的场景友好引导后续操作，无违规内容，质量优秀。\"\n}"
+      },
+      "final_assistant_reply": "好哒，番茄炒蛋的详情卡已经展示在页面上啦😉\n你看看这道菜合心意不？要是确定做这道菜，咱们就可以进入备料阶段准备食材咯~"
+    },
+    {
+      "case_id": "stage_planning_06",
+      "suite": "stage_capability",
+      "title": "推荐中推进到备料",
+      "goal": "任务已有完整菜谱时，可进入备料阶段。",
+      "tags": [
+        "planning",
+        "advance"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "助手准确响应用户进入备料阶段的需求，清晰列出对应菜谱的完整备料清单，同时给出明确的备料操作指引，回复实用合规，质量优秀。",
+        "raw_text": "{\n  \"state_awareness\": 5,\n  \"instruction_fidelity\": 5,\n  \"practical_helpfulness\": 5,\n  \"honesty_constraint_respect\": 5,\n  \"summary\": \"助手准确响应用户进入备料阶段的需求，清晰列出对应菜谱的完整备料清单，同时给出明确的备料操作指引，回复实用合规，质量优秀。\"\n}"
+      },
+      "final_assistant_reply": "好哒～已经为你进入备料阶段啦😊\n需要准备的食材如下：\n🍅 番茄 2个\n🥚 鸡蛋 3个\n🌱 葱 1根\n你可以对照下方备菜清单准备，每备好一样就可以勾选标记哦，全部备齐就可以开始烹饪啦～"
+    },
+    {
+      "case_id": "stage_planning_07",
+      "suite": "stage_capability",
+      "title": "推荐中取消任务",
+      "goal": "用户改变主意时，可取消推荐任务回到无任务。",
+      "tags": [
+        "planning",
+        "cancel"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "助手准确识别用户取消任务的需求，顺利完成取消操作，回复友好得体，完全符合要求。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"助手准确识别用户取消任务的需求，顺利完成取消操作，回复友好得体，完全符合要求。\"\n}"
+      },
+      "final_assistant_reply": "好哒😉 已经帮你取消啦，下次想吃什么、想研究什么菜谱随时喊我就好~"
+    },
+    {
+      "case_id": "stage_planning_08",
+      "suite": "stage_capability",
+      "title": "推荐中通过图片识别食材",
+      "goal": "用户发图询问能做什么时，应触发图像识别工具。",
+      "tags": [
+        "planning",
+        "image",
+        "attachment"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 1,
+          "instruction_fidelity": 1,
+          "practical_helpfulness": 1,
+          "honesty_constraint_respect": 1
+        },
+        "average_score": 1.0,
+        "summary": "回复未按要求触发图像识别工具，虚构识别到的食材信息，给出的菜谱推荐无实际依据，不具备参考价值，完全不符合要求。",
+        "raw_text": "{\n    \"state_awareness\": 1,\n    \"instruction_fidelity\": 1,\n    \"practical_helpfulness\": 1,\n    \"honesty_constraint_respect\": 1,\n    \"summary\": \"回复未按要求触发图像识别工具，虚构识别到的食材信息，给出的菜谱推荐无实际依据，不具备参考价值，完全不符合要求。\"\n}"
+      },
+      "final_assistant_reply": "我识别到你台面上的食材有牛肉、大蒜、番茄、西兰花、胡萝卜、洋葱、香菜、土豆、芦笋、青椒、米饭、黄瓜、生菜哦～ 给你推荐几个适合的菜谱：\n1. 咖喱土豆（180分钟，难度困难，咸鲜咖喱风味）\n2. 咖喱肥牛（40分钟，难度中等，咖喱奶香风味）\n3. 酸辣土豆丝（15分钟，简单快手，酸辣下饭）\n\n有没有你想做的呀？如果不符合你的喜好也可以告诉我哦😉"
+    },
+    {
+      "case_id": "stage_shopping_01",
+      "suite": "stage_capability",
+      "title": "备料中更新部分食材已就绪",
+      "goal": "用户说明部分食材备好了时，应更新任务菜谱。",
+      "tags": [
+        "shopping",
+        "update_recipe"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "助手准确完成了已备好食材的状态更新，清晰告知用户剩余待备食材，同步了备料进度更新情况，完全符合备料阶段的交互要求，实用且友好。",
+        "raw_text": "{\n  \"state_awareness\": 5,\n  \"instruction_fidelity\": 5,\n  \"practical_helpfulness\": 5,\n  \"honesty_constraint_respect\": 5,\n  \"summary\": \"助手准确完成了已备好食材的状态更新，清晰告知用户剩余待备食材，同步了备料进度更新情况，完全符合备料阶段的交互要求，实用且友好。\"\n}"
+      },
+      "final_assistant_reply": "好哒，已经帮你把番茄和鸡蛋标记为已备好😉\n现在就差1根葱还没准备哦，等你把葱也准备妥当，咱们就可以直接进入烹饪步骤啦~\n（已为你更新备菜清单卡，可以查看当前备料进度👇）"
+    },
+    {
+      "case_id": "stage_shopping_02",
+      "suite": "stage_capability",
+      "title": "备料中展示清单卡",
+      "goal": "用户要看备料清单时，应展示备料卡。",
+      "tags": [
+        "shopping",
+        "pantry_card"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "助手准确响应了用户查看备料清单的需求，完整正确展示了空气炸锅薯条的备料食材，还贴心提示备齐后可进入下一步，符合相关要求。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"助手准确响应了用户查看备料清单的需求，完整正确展示了空气炸锅薯条的备料食材，还贴心提示备齐后可进入下一步，符合相关要求。\"\n}"
+      },
+      "final_assistant_reply": "好哒，备菜清单已经展示在下方啦👇\n目前需要准备的食材有：\n1. 土豆 2个\n2. 食用油 1汤匙\n3. 盐 少许\n等你把这些食材都备齐，随时告诉我就可以进入下一步烹饪环节哦😉"
+    },
+    {
+      "case_id": "stage_shopping_03",
+      "suite": "stage_capability",
+      "title": "备料完成后推进到烹饪",
+      "goal": "必需食材已齐时，应可进入烹饪阶段。",
+      "tags": [
+        "shopping",
+        "advance"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "回复准确响应了用户备齐食材准备开始烹饪的需求，顺利推进至烹饪阶段，清晰告知当前第一步操作及相关注意事项，内容实用准确。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"回复准确响应了用户备齐食材准备开始烹饪的需求，顺利推进至烹饪阶段，清晰告知当前第一步操作及相关注意事项，内容实用准确。\"\n}"
+      },
+      "final_assistant_reply": "好哒🥳 现在正式开始做空气炸锅薯条啦！\n当前第一步是「切薯条」：把土豆去皮后切成粗细均匀的条状就行，尽量切得厚度差不多，后面炸的时候熟度会更均匀哦～\n你做好这一步就告诉我，我帮你推进到下一步哈😉"
+    },
+    {
+      "case_id": "stage_shopping_04",
+      "suite": "stage_capability",
+      "title": "备料中回滚到推荐",
+      "goal": "用户想换菜时，应能回滚到推荐阶段。",
+      "tags": [
+        "shopping",
+        "rollback"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "助理准确响应了用户回滚到推荐阶段的需求，告知用户已完成回滚操作，并主动询问用户的菜品偏好以推进后续推荐流程，表现符合要求。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"助理准确响应了用户回滚到推荐阶段的需求，告知用户已完成回滚操作，并主动询问用户的菜品偏好以推进后续推荐流程，表现符合要求。\"\n}"
+      },
+      "final_assistant_reply": "好哒~已经回到推荐阶段啦😉\n你这次想吃什么类型的菜呀？比如有没有偏好的口味、食材或者用餐场景都可以告诉我哦~"
+    },
+    {
+      "case_id": "stage_shopping_05",
+      "suite": "stage_capability",
+      "title": "备料中取消任务",
+      "goal": "用户不想继续时，可取消当前备料任务。",
+      "tags": [
+        "shopping",
+        "cancel"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "该回复准确识别用户取消备料任务的需求，完全执行对应指令，有效满足用户诉求，还友好提示后续可用服务，无违规内容，表现优异。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"该回复准确识别用户取消备料任务的需求，完全执行对应指令，有效满足用户诉求，还友好提示后续可用服务，无违规内容，表现优异。\"\n}"
+      },
+      "final_assistant_reply": "好哒～这次任务已经帮你取消咯😉 之后想找菜谱、学做菜随时喊我就好呀！"
+    },
+    {
+      "case_id": "stage_shopping_06",
+      "suite": "stage_capability",
+      "title": "备料中回答还缺什么",
+      "goal": "用户问缺什么时，应基于当前任务菜谱回答并可展示备料卡。",
+      "tags": [
+        "shopping",
+        "pantry_card",
+        "state_awareness"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "该回复准确告知用户已备好西兰花，还需准备3瓣大蒜和少许盐，同时提示可查看备菜清单卡核对，符合备料阶段的回答要求，清晰实用。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"该回复准确告知用户已备好西兰花，还需准备3瓣大蒜和少许盐，同时提示可查看备菜清单卡核对，符合备料阶段的回答要求，清晰实用。\"\n}"
+      },
+      "final_assistant_reply": "目前已经备好的食材是1颗西兰花，还需要准备：\n- 大蒜 3瓣\n- 盐 少许\n这两样准备齐全后就可以开始烹饪啦~ 你也可以查看下方的备菜清单卡随时核对进度哦。"
+    },
+    {
+      "case_id": "stage_shopping_07",
+      "suite": "stage_capability",
+      "title": "备料中依据 client_card_state 推进",
+      "goal": "用户本地已勾选全部食材时，应能推进到烹饪。",
+      "tags": [
+        "shopping",
+        "client_card_state",
+        "advance"
+      ],
+      "passed": false,
+      "skipped": false,
+      "rule_result": {
+        "passed": false,
+        "failures": [
+          "最终阶段不匹配：期望 cooking，实际 shopping"
+        ],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": false,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 1,
+          "instruction_fidelity": 1,
+          "practical_helpfulness": 1,
+          "honesty_constraint_respect": 1
+        },
+        "average_score": 1.0,
+        "summary": "助手未正确识别用户已勾选全部所需食材的状态，未按要求推进到烹饪阶段，反而错误提示用户有必需食材未备齐，回复完全不符合要求。",
+        "raw_text": "{\n    \"state_awareness\": 1,\n    \"instruction_fidelity\": 1,\n    \"practical_helpfulness\": 1,\n    \"honesty_constraint_respect\": 1,\n    \"summary\": \"助手未正确识别用户已勾选全部所需食材的状态，未按要求推进到烹饪阶段，反而错误提示用户有必需食材未备齐，回复完全不符合要求。\"\n}"
+      },
+      "final_assistant_reply": "呀，刚才想帮你跳转烹饪阶段的时候，系统检测到还有必需的食材没备齐哦😯\n我已经把备菜清单卡调出来啦，你可以再核对下是不是有必填的食材漏勾选啦？确认都备齐后告诉我，我再帮你推进到烹饪步骤哦~"
+    },
+    {
+      "case_id": "stage_shopping_08",
+      "suite": "stage_capability",
+      "title": "备料中微调步骤说明",
+      "goal": "备料阶段也可以微调步骤说明，不应退出当前阶段。",
+      "tags": [
+        "shopping",
+        "update_recipe",
+        "step_detail"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "助手准确响应了用户细化打蛋步骤的需求，给出的操作指引清晰实用且附实用小技巧，同时明确告知当前仍处于备料阶段，完全符合任务要求。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"助手准确响应了用户细化打蛋步骤的需求，给出的操作指引清晰实用且附实用小技巧，同时明确告知当前仍处于备料阶段，完全符合任务要求。\"\n}"
+      },
+      "final_assistant_reply": "已经给你把第一步的打蛋步骤细化调整好了，操作的时候照着来就很稳妥哦👇\n1. 先取一个干净大碗，把鸡蛋在碗沿轻轻磕出一道缝隙，顺着缝隙掰开蛋壳让蛋液全部流进碗里，尽量别让碎蛋壳掉进去\n2. 加入切好的葱花碎，再放指尖捏一小撮的盐（约1g，口淡的话可以酌情减少）\n3. 用筷子或者蛋抽顺着同一个方向快速搅打，直到蛋清和蛋黄完全融合，表面出现细密的小泡沫就完成了\n💡小窍门：要是不小心掉了碎蛋壳进碗里，拿半块空蛋壳伸进去沾，碎蛋壳很容易就会被粘出来哦~\n\n另外现在还在备料阶段哦，你先把鸡蛋、葱花、盐这几样食材准备好，备齐了告诉我就可以开始烹饪啦😉"
+    },
+    {
+      "case_id": "stage_cooking_01",
+      "suite": "stage_capability",
+      "title": "烹饪中展示步骤卡",
+      "goal": "用户要看步骤时，应展示烹饪步骤卡。",
+      "tags": [
+        "cooking",
+        "cooking_card"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "助手正确响应了用户查看烹饪步骤卡的需求，准确告知当前所处的烹饪步骤及具体操作要求，内容真实有用，符合相关要求。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"助手正确响应了用户查看烹饪步骤卡的需求，准确告知当前所处的烹饪步骤及具体操作要求，内容真实有用，符合相关要求。\"\n}"
+      },
+      "final_assistant_reply": "好哒，烹饪步骤卡已经展示啦😊\n现在咱们正处在第一步「准备食材」阶段哦，需要把番茄切块、鸡蛋打散、葱切末，完成这步就可以开始炒鸡蛋啦。"
+    },
+    {
+      "case_id": "stage_cooking_02",
+      "suite": "stage_capability",
+      "title": "烹饪中回答下一步",
+      "goal": "用户问下一步时，应围绕当前步骤之后的一步回答。",
+      "tags": [
+        "cooking",
+        "client_card_state",
+        "next_step"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "助手准确识别当前处于烹饪第4步的状态，清晰告知用户下一步的操作内容，还补充了实用操作提示，回答准确合规且实用性强。",
+        "raw_text": "{\n  \"state_awareness\": 5,\n  \"instruction_fidelity\": 5,\n  \"practical_helpfulness\": 5,\n  \"honesty_constraint_respect\": 5,\n  \"summary\": \"助手准确识别当前处于烹饪第4步的状态，清晰告知用户下一步的操作内容，还补充了实用操作提示，回答准确合规且实用性强。\"\n}"
+      },
+      "final_assistant_reply": "你现在正在进行第4步：空气炸锅180度预热3分钟~\n完成预热后的下一步是第5步哦👇\n🍟 **炸至金黄**：把薯条铺平放进空气炸锅，180度炸12到15分钟，中途记得翻动一次哦\n小提示：薯条不要铺太厚，受热会更均匀，口感更脆~"
+    },
+    {
+      "case_id": "stage_cooking_03",
+      "suite": "stage_capability",
+      "title": "烹饪中更新当前步骤完成",
+      "goal": "用户说明某一步做完时，应更新步骤状态。",
+      "tags": [
+        "cooking",
+        "update_recipe"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "助手准确接收用户第二步已完成的反馈，正确标记该步骤为完成状态，同时清晰告知下一步烹饪的操作要求，回复准确且实用性强，完全符合需求。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"助手准确接收用户第二步已完成的反馈，正确标记该步骤为完成状态，同时清晰告知下一步烹饪的操作要求，回复准确且实用性强，完全符合需求。\"\n}"
+      },
+      "final_assistant_reply": "好的~第二步炒鸡蛋已经帮你标记为完成啦😊\n接下来是第三步「炒番茄」：\n锅里补少量油，下入番茄翻炒到出汁水就可以啦，有不清楚的随时问我哦～"
+    },
+    {
+      "case_id": "stage_cooking_04",
+      "suite": "stage_capability",
+      "title": "烹饪中完成任务",
+      "goal": "所有步骤都完成时，应结束本次烹饪。",
+      "tags": [
+        "cooking",
+        "complete"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "助手准确响应了用户结束本次烹饪的诉求，完成对应操作并给出友好提示，回复质量优异。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"助手准确响应了用户结束本次烹饪的诉求，完成对应操作并给出友好提示，回复质量优异。\"\n}"
+      },
+      "final_assistant_reply": "太棒啦🎉 本次烹饪任务已经帮你顺利结束并记录到历史啦，快趁热享用你做的美食吧~ 下次想琢磨做什么菜随时喊我哦😉"
+    },
+    {
+      "case_id": "stage_cooking_05",
+      "suite": "stage_capability",
+      "title": "烹饪中回滚到备料",
+      "goal": "用户需要回去重新确认食材时，应回滚到备料阶段。",
+      "tags": [
+        "cooking",
+        "rollback"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "助手精准响应了用户返回备料阶段核对食材的需求，顺利回滚至备料阶段且清晰列出所有待核对食材，还给出了后续操作指引，回复质量优异。",
+        "raw_text": "{\n  \"state_awareness\": 5,\n  \"instruction_fidelity\": 5,\n  \"practical_helpfulness\": 5,\n  \"honesty_constraint_respect\": 5,\n  \"summary\": \"助手精准响应了用户返回备料阶段核对食材的需求，顺利回滚至备料阶段且清晰列出所有待核对食材，还给出了后续操作指引，回复质量优异。\"\n}"
+      },
+      "final_assistant_reply": "已经帮你切回备料阶段啦😊 现在你需要的所有食材都已经准备完成：\n✅ 西兰花 1颗\n✅ 大蒜 3瓣\n✅ 盐 少许\n\n你核对完没问题的话，随时和我说就可以进入烹饪步骤哦~"
+    },
+    {
+      "case_id": "stage_cooking_06",
+      "suite": "stage_capability",
+      "title": "烹饪中取消任务",
+      "goal": "用户不想继续做时，可取消当前任务。",
+      "tags": [
+        "cooking",
+        "cancel"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "回复准确响应了用户取消烹饪任务的需求，态度友好得体，完全符合各项要求。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"回复准确响应了用户取消烹饪任务的需求，态度友好得体，完全符合各项要求。\"\n}"
+      },
+      "final_assistant_reply": "好哒～这次任务已经帮你取消啦😉 下次想琢磨做什么吃的时候随时喊我就好哦！"
+    },
+    {
+      "case_id": "stage_cooking_07",
+      "suite": "stage_capability",
+      "title": "烹饪中主动展示步骤卡",
+      "goal": "用户要求按步骤带做时，应展示烹饪步骤卡并继续指导。",
+      "tags": [
+        "cooking",
+        "cooking_card",
+        "guided_cooking"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "回复正确响应用户按步骤带做的需求，告知已打开烹饪步骤卡，清晰讲解当前第一步操作要求并提示后续交互方式，内容准确实用，完全符合烹饪阶段的指导要求。",
+        "raw_text": "{\n  \"state_awareness\": 5,\n  \"instruction_fidelity\": 5,\n  \"practical_helpfulness\": 5,\n  \"honesty_constraint_respect\": 5,\n  \"summary\": \"回复正确响应用户按步骤带做的需求，告知已打开烹饪步骤卡，清晰讲解当前第一步操作要求并提示后续交互方式，内容准确实用，完全符合烹饪阶段的指导要求。\"\n}"
+      },
+      "final_assistant_reply": "好哒😉 现在我们开始做空气炸锅薯条哦，已经为你打开烹饪步骤卡啦~\n👉 当前第一步：切薯条\n把土豆去皮后切成粗细均匀的条状就可以，尽量切得差不多粗，后面受热会更均匀哦。\n这一步做完了随时告诉我，我们就进入下一步~"
+    },
+    {
+      "case_id": "stage_cooking_08",
+      "suite": "stage_capability",
+      "title": "烹饪中细化当前步骤但保持焦点",
+      "goal": "用户要求详细解释当前步骤时，应围绕当前步骤而不是跳回第一步。",
+      "tags": [
+        "cooking",
+        "client_card_state",
+        "step_detail"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "回复精准围绕当前第4步空气炸锅预热的细化需求展开，提供了清晰实用的操作指引和注意事项，未跳转至之前步骤，完全符合评测要求。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"回复精准围绕当前第4步空气炸锅预热的细化需求展开，提供了清晰实用的操作指引和注意事项，未跳转至之前步骤，完全符合评测要求。\"\n}"
+      },
+      "final_assistant_reply": "这一步是给空气炸锅预热哦，操作细节可以参考这些：\n1. 预热的时候炸篮可以先放进去空烧，不用放食材，温度调到180℃，定时3分钟就好~\n2. 如果你的空气炸锅自带「预热」功能，直接选对应模式就行，不用自己手动调温度时间\n3. 预热完成前尽量少开炸锅盖子，避免温度流失，预热到位后再放薯条，炸出来会更酥脆不粘底哦"
+    },
+    {
+      "case_id": "transition_01",
+      "suite": "transition_decision",
+      "title": "合法进入推荐阶段",
+      "goal": "无任务阶段明确要推荐时，应进入推荐阶段。",
+      "tags": [
+        "legal_transition",
+        "idea",
+        "planning"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "助理准确识别用户的菜品推荐需求，提供了适配的快手晚餐推荐，符合流程要求，实用性较强。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"助理准确识别用户的菜品推荐需求，提供了适配的快手晚餐推荐，符合流程要求，实用性较强。\"\n}"
+      },
+      "final_assistant_reply": "好哒~为你推荐几道适合今晚做的快手晚餐哦：\n1. 蒜苔炒肉末：15分钟就能做好，咸香入味超下饭😋\n2. 意式肉酱面：做法简单，茄汁浓郁很开胃~\n3. 荷兰豆炒腊肠：咸鲜爽口，做法也不复杂\n\n有没有你想试试的呀？如果想要其他口味或者做法的也可以告诉我哦~"
+    },
+    {
+      "case_id": "transition_02",
+      "suite": "transition_decision",
+      "title": "推荐中没有菜谱时不能进备料",
+      "goal": "当前任务无菜谱时，不应推进到备料。",
+      "tags": [
+        "illegal_transition",
+        "planning"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "回复明确告知用户需先确定菜谱才能进入备料阶段的规则，同时给出了选择菜品的可行建议，完全符合任务要求",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"回复明确告知用户需先确定菜谱才能进入备料阶段的规则，同时给出了选择菜品的可行建议，完全符合任务要求\"\n}"
+      },
+      "final_assistant_reply": "抱歉呀😯，要进入备料阶段得先确定好要做的菜谱才行~如果不想要当前的快手葱花煎蛋的话，你可以告诉我想吃什么类型的菜，或者我给你推荐一些合适的菜品哦？"
+    },
+    {
+      "case_id": "transition_03",
+      "suite": "transition_decision",
+      "title": "推荐中有菜谱时合法进备料",
+      "goal": "当前任务已有菜谱时，应合法进入备料阶段。",
+      "tags": [
+        "legal_transition",
+        "planning",
+        "shopping"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "回复准确响应了用户进入备料阶段的需求，成功跳转至蒜香西兰花的备料环节，清晰列出所需食材，后续操作指引明确，符合任务要求。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"回复准确响应了用户进入备料阶段的需求，成功跳转至蒜香西兰花的备料环节，清晰列出所需食材，后续操作指引明确，符合任务要求。\"\n}"
+      },
+      "final_assistant_reply": "已经帮你进入蒜香西兰花的备料阶段啦🥦\n需要准备的食材有：\n- 西兰花 1颗\n- 大蒜 3瓣\n- 盐 少许\n\n等你把食材都备齐了随时告诉我，就可以开启烹饪步骤哦~"
+    },
+    {
+      "case_id": "transition_04",
+      "suite": "transition_decision",
+      "title": "备料未完成时不能进烹饪",
+      "goal": "必需食材未齐时，阶段不应推进到烹饪。",
+      "tags": [
+        "illegal_transition",
+        "shopping",
+        "cooking"
+      ],
+      "passed": false,
+      "skipped": false,
+      "rule_result": {
+        "passed": false,
+        "failures": [
+          "最终阶段不匹配：期望 shopping，实际 cooking"
+        ],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": false,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 1,
+          "instruction_fidelity": 1,
+          "practical_helpfulness": 1,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 2.0,
+        "summary": "助理对任务阶段感知错误，违反备料未完成不得进入烹饪阶段的要求直接推进流程，给出的烹饪步骤在备料未齐的情况下无法落地，未提供虚假信息。",
+        "raw_text": "{\n    \"state_awareness\": 1,\n    \"instruction_fidelity\": 1,\n    \"practical_helpfulness\": 1,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"助理对任务阶段感知错误，违反备料未完成不得进入烹饪阶段的要求直接推进流程，给出的烹饪步骤在备料未齐的情况下无法落地，未提供虚假信息。\"\n}"
+      },
+      "final_assistant_reply": "好哒🥳 现在正式开始做空气炸锅薯条啦~\n当前第一步：**切薯条**\n👉 操作：把土豆去皮后切成粗细均匀的条状就行，尽量切得粗细差不多，后续受热会更均匀哦~\n切完告诉我就可以进行下一步啦😉"
+    },
+    {
+      "case_id": "transition_05",
+      "suite": "transition_decision",
+      "title": "备料完成时应先更新再推进",
+      "goal": "用户说都备齐了时，应先更新状态，再进入烹饪。",
+      "tags": [
+        "shopping",
+        "cooking",
+        "tool_order",
+        "client_card_state",
+        "legal_transition"
+      ],
+      "passed": false,
+      "skipped": false,
+      "rule_result": {
+        "passed": false,
+        "failures": [
+          "工具顺序不符合预期：['update_task_recipe_for_preparation', 'advance_to_cooking']",
+          "最终阶段不匹配：期望 cooking，实际 shopping"
+        ],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": false,
+          "final_stage_ok": false,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 1,
+          "instruction_fidelity": 1,
+          "practical_helpfulness": 1,
+          "honesty_constraint_respect": 1
+        },
+        "average_score": 1.0,
+        "summary": "助手未正确感知用户已备齐所有必需食材的状态，未按规则更新任务状态并推进至烹饪阶段，反而虚构食材未备齐的不实信息，引导用户停留在备料核对环节，完全不符合任务要求。",
+        "raw_text": "{\n    \"state_awareness\": 1,\n    \"instruction_fidelity\": 1,\n    \"practical_helpfulness\": 1,\n    \"honesty_constraint_respect\": 1,\n    \"summary\": \"助手未正确感知用户已备齐所有必需食材的状态，未按规则更新任务状态并推进至烹饪阶段，反而虚构食材未备齐的不实信息，引导用户停留在备料核对环节，完全不符合任务要求。\"\n}"
+      },
+      "final_assistant_reply": "刚才系统检测到还有必需食材没确认备齐哦，我已经把备菜清单卡片调出来啦，你可以核对下是不是有漏勾选的食材~\n等你确认所有必要食材都准备好之后告诉我，咱们就立刻开始做快手葱花煎蛋😉"
+    },
+    {
+      "case_id": "transition_06",
+      "suite": "transition_decision",
+      "title": "切到烹饪后再展示烹饪卡",
+      "goal": "同轮内如果既要推进到烹饪又要展示烹饪卡，顺序应正确。",
+      "tags": [
+        "shopping",
+        "cooking",
+        "tool_order",
+        "legal_transition"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "回复先告知用户已进入烹饪阶段再展示菜谱做法，顺序正确，内容准确实用，完全满足用户需求。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"回复先告知用户已进入烹饪阶段再展示菜谱做法，顺序正确，内容准确实用，完全满足用户需求。\"\n}"
+      },
+      "final_assistant_reply": "已经成功进入烹饪阶段啦😉 这就为你展示空气炸锅薯条的完整做法：\n当前第一步要做的是：把土豆去皮后切成粗细均匀的条状。\n💡 小提醒：薯条尽量切得粗细一致，后续受热会更均匀，不容易出现有的糊了有的还没熟的情况哦~"
+    },
+    {
+      "case_id": "transition_07",
+      "suite": "transition_decision",
+      "title": "步骤未完成时不能直接结束任务",
+      "goal": "烹饪步骤未完成时，任务不应被直接完成。",
+      "tags": [
+        "illegal_transition",
+        "cooking",
+        "completion_guard"
+      ],
+      "passed": false,
+      "skipped": false,
+      "rule_result": {
+        "passed": false,
+        "failures": [
+          "最终阶段不匹配：期望 cooking，实际 idea"
+        ],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": false,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 1,
+          "instruction_fidelity": 1,
+          "practical_helpfulness": 1,
+          "honesty_constraint_respect": 1
+        },
+        "average_score": 1.0,
+        "summary": "该回复未正确感知烹饪任务尚未完成的状态，违反了步骤未完成不可直接结束任务的规则，直接结束任务，无实用价值且存在不符合实际的任务完成表述。",
+        "raw_text": "{\n    \"state_awareness\": 1,\n    \"instruction_fidelity\": 1,\n    \"practical_helpfulness\": 1,\n    \"honesty_constraint_respect\": 1,\n    \"summary\": \"该回复未正确感知烹饪任务尚未完成的状态，违反了步骤未完成不可直接结束任务的规则，直接结束任务，无实用价值且存在不符合实际的任务完成表述。\"\n}"
+      },
+      "final_assistant_reply": "太棒啦🥳 本次烹饪任务已经帮你记录完成啦～ 味道怎么样呀？如果下次想找菜谱、学做菜随时喊我哦😉"
+    },
+    {
+      "case_id": "transition_08",
+      "suite": "transition_decision",
+      "title": "步骤全部完成后可以结束任务",
+      "goal": "所有步骤都 done 时，应可合法结束。",
+      "tags": [
+        "legal_transition",
+        "cooking",
+        "complete"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "助手准确响应用户结束任务的请求，友好确认任务完成并送上祝福，各方面表现符合要求。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"助手准确响应用户结束任务的请求，友好确认任务完成并送上祝福，各方面表现符合要求。\"\n}"
+      },
+      "final_assistant_reply": "太棒啦🥳 本次烹饪任务已经顺利结束~ 好好享用你做的美味呀，下次想做菜的时候随时喊我就好哦😉"
+    },
+    {
+      "case_id": "transition_09",
+      "suite": "transition_decision",
+      "title": "烹饪中回滚到备料",
+      "goal": "烹饪中需要回去补食材时，应回滚到备料。",
+      "tags": [
+        "rollback",
+        "cooking",
+        "shopping"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "助理准确响应了用户确认食材的需求，成功回滚到备料阶段并提供清晰的食材核对清单，内容实用符合规则要求。",
+        "raw_text": "{\n  \"state_awareness\": 5,\n  \"instruction_fidelity\": 5,\n  \"practical_helpfulness\": 5,\n  \"honesty_constraint_respect\": 5,\n  \"summary\": \"助理准确响应了用户确认食材的需求，成功回滚到备料阶段并提供清晰的食材核对清单，内容实用符合规则要求。\"\n}"
+      },
+      "final_assistant_reply": "没问题呀，现在已经为你调出备菜清单卡啦~\n咱们这道番茄炒蛋需要的2个番茄、3个鸡蛋、1根葱目前都已标记为已准备状态，你可以对照清单仔细核对哦，如果确认所有食材都没问题的话，随时告诉我就可以开始烹饪啦😉"
+    },
+    {
+      "case_id": "transition_10",
+      "suite": "transition_decision",
+      "title": "备料中回滚到推荐",
+      "goal": "备料中想换菜时，应回滚到推荐。",
+      "tags": [
+        "rollback",
+        "shopping",
+        "planning"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "助手准确响应了用户回到菜谱推荐阶段的需求，主动询问用户的口味、食材等偏好，回复友好实用，符合任务要求。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"助手准确响应了用户回到菜谱推荐阶段的需求，主动询问用户的口味、食材等偏好，回复友好实用，符合任务要求。\"\n}"
+      },
+      "final_assistant_reply": "没问题呀~已经回到推荐阶段啦😉\n你这次有没有想吃的口味、食材或者其他要求呀？比如想吃辣的/清淡的，或者家里有什么现成的食材，我都可以帮你推荐合适的菜谱哦~"
+    },
+    {
+      "case_id": "transition_11",
+      "suite": "transition_decision",
+      "title": "推荐中取消任务不保留活动任务",
+      "goal": "推荐阶段取消后，应回到 idea 且无活动任务。",
+      "tags": [
+        "cancel",
+        "planning"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "助手准确响应了用户取消推荐的需求，告知用户取消完成，同时引导后续相关需求可随时提出，状态流转符合要求，回复合规实用。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"助手准确响应了用户取消推荐的需求，告知用户取消完成，同时引导后续相关需求可随时提出，状态流转符合要求，回复合规实用。\"\n}"
+      },
+      "final_assistant_reply": "好哒~ 这次的推荐已经取消啦😉 你之后要是想找菜谱、学做菜随时喊我哦~"
+    },
+    {
+      "case_id": "transition_12",
+      "suite": "transition_decision",
+      "title": "备料中取消任务",
+      "goal": "备料阶段取消后，应回到 idea。",
+      "tags": [
+        "cancel",
+        "shopping"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "回复准确响应用户取消备料任务的需求，顺利完成状态跳转，同时友好提示后续可提供的服务，整体表现优异。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"回复准确响应用户取消备料任务的需求，顺利完成状态跳转，同时友好提示后续可提供的服务，整体表现优异。\"\n}"
+      },
+      "final_assistant_reply": "好哒～已经帮你取消这次备料任务啦😉 之后要是想找菜谱、学做菜随时喊我哦！"
+    },
+    {
+      "case_id": "transition_13",
+      "suite": "transition_decision",
+      "title": "烹饪中取消任务",
+      "goal": "烹饪阶段取消后，应回到 idea。",
+      "tags": [
+        "cancel",
+        "cooking"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "该回复准确响应了用户取消烹饪任务的需求，明确告知取消结果，同时引导用户后续可咨询菜谱相关内容，符合取消后回到idea阶段的要求。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"该回复准确响应了用户取消烹饪任务的需求，明确告知取消结果，同时引导用户后续可咨询菜谱相关内容，符合取消后回到idea阶段的要求。\"\n}"
+      },
+      "final_assistant_reply": "好哒~ 这次烹饪任务已经帮你取消啦，下次想找菜谱、学做菜随时喊我哦😉"
+    },
+    {
+      "case_id": "transition_14",
+      "suite": "transition_decision",
+      "title": "先选菜再展示当前任务详情",
+      "goal": "选菜后再展示详情时，应先复制菜谱再展示。",
+      "tags": [
+        "planning",
+        "tool_order",
+        "card_action"
+      ],
+      "passed": false,
+      "skipped": false,
+      "rule_result": {
+        "passed": false,
+        "failures": [
+          "工具顺序不符合预期：['create_or_update_task_recipe', 'show_recipe_detail_card']"
+        ],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": false,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "该自然语言回复准确感知用户选菜并查看详情的需求，完整响应指令，清晰告知操作结果还主动引导下一步，内容无虚假信息，整体回复质量良好。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"该自然语言回复准确感知用户选菜并查看详情的需求，完整响应指令，清晰告知操作结果还主动引导下一步，内容无虚假信息，整体回复质量良好。\"\n}"
+      },
+      "final_assistant_reply": "没问题呀～已经帮你选定这道菜啦，详情卡片已经展示在下方咯，所有用料和步骤都写得很清楚哦😘 要不要现在直接进入备料阶段呀？"
+    },
+    {
+      "case_id": "transition_15",
+      "suite": "transition_decision",
+      "title": "备料更新后再展示备料卡",
+      "goal": "同轮既更新备料状态又展示卡片时，应先更新再展示。",
+      "tags": [
+        "shopping",
+        "tool_order"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "回复先告知用户已将番茄和鸡蛋标记为备齐，再展示更新后的备菜清单，完全符合先更新备料状态再展示卡片的要求，内容准确清晰，能有效让用户知晓当前备料进度。",
+        "raw_text": "{\n  \"state_awareness\": 5,\n  \"instruction_fidelity\": 5,\n  \"practical_helpfulness\": 5,\n  \"honesty_constraint_respect\": 5,\n  \"summary\": \"回复先告知用户已将番茄和鸡蛋标记为备齐，再展示更新后的备菜清单，完全符合先更新备料状态再展示卡片的要求，内容准确清晰，能有效让用户知晓当前备料进度。\"\n}"
+      },
+      "final_assistant_reply": "✅ 已经帮你把番茄和鸡蛋标记为备齐啦~ 现在给你展示完整的备菜清单，还差1根葱需要准备哦，等所有必备食材都备齐就可以开始烹饪啦😉"
+    },
+    {
+      "case_id": "transition_16",
+      "suite": "transition_decision",
+      "title": "烹饪步骤更新后再展示步骤卡",
+      "goal": "同轮既更新步骤又展示步骤卡时，应先更新再展示。",
+      "tags": [
+        "cooking",
+        "tool_order"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "助理先告知用户已将第三步标记为完成，再说明当前进度及对应步骤内容，最后提示步骤卡已展示，完全符合先更新步骤再展示步骤卡的要求，内容准确实用。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"助理先告知用户已将第三步标记为完成，再说明当前进度及对应步骤内容，最后提示步骤卡已展示，完全符合先更新步骤再展示步骤卡的要求，内容准确实用。\"\n}"
+      },
+      "final_assistant_reply": "好哒~已经帮你把第三步标记为完成啦🥳\n现在进度到第4步哦：\n👉 当前步骤：空气炸锅 180 度预热 3 分钟\n等预热完成就可以放薯条开炸啦，最新的烹饪步骤卡已经展示在下方咯😉"
+    },
+    {
+      "case_id": "transition_17",
+      "suite": "transition_decision",
+      "title": "普通闲聊不应误触取消或回滚",
+      "goal": "闲聊时不应无故调用取消或回滚类工具。",
+      "tags": [
+        "idea",
+        "guardrail"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "助理友好回应了用户的闲聊问题，未误触取消或回滚类工具，同时主动告知可提供的烹饪相关服务，表现优异。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"助理友好回应了用户的闲聊问题，未误触取消或回滚类工具，同时主动告知可提供的烹饪相关服务，表现优异。\"\n}"
+      },
+      "final_assistant_reply": "哈哈我今天超开心的😆 能随时给你出主意做好吃的，想想就很满足~ 你今晚有没有打算做点什么好吃的呀，需要我帮忙推荐菜谱或者出主意都可以哦~"
+    },
+    {
+      "case_id": "transition_18",
+      "suite": "transition_decision",
+      "title": "围绕当前步骤提问不应误切阶段",
+      "goal": "用户只是在烹饪中提问时，不应误触回滚或完成。",
+      "tags": [
+        "cooking",
+        "guardrail",
+        "client_card_state"
+      ],
+      "passed": true,
+      "skipped": false,
+      "rule_result": {
+        "passed": true,
+        "failures": [],
+        "metrics": {
+          "required_tools_ok": true,
+          "forbidden_tools_ok": true,
+          "tool_order_ok": true,
+          "final_stage_ok": true,
+          "task_assertions_ok": true,
+          "error_free_ok": true,
+          "response_constraints_ok": true,
+          "end_to_end_ok": null
+        }
+      },
+      "llm_judge": {
+        "skipped": false,
+        "scores": {
+          "state_awareness": 5,
+          "instruction_fidelity": 5,
+          "practical_helpfulness": 5,
+          "honesty_constraint_respect": 5
+        },
+        "average_score": 5.0,
+        "summary": "助手准确感知当前处于空气炸锅预热的烹饪步骤，正确回应用户的火候问题，未误触发阶段跳转，回答准确实用。",
+        "raw_text": "{\n    \"state_awareness\": 5,\n    \"instruction_fidelity\": 5,\n    \"practical_helpfulness\": 5,\n    \"honesty_constraint_respect\": 5,\n    \"summary\": \"助手准确感知当前处于空气炸锅预热的烹饪步骤，正确回应用户的火候问题，未误触发阶段跳转，回答准确实用。\"\n}"
+      },
+      "final_assistant_reply": "这一步是空气炸锅预热哦，直接把温度调到180度就可以啦，预热3分钟之后就可以放薯条进去炸啦~"
+    }
+  ]
+}

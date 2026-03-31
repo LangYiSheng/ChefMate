@@ -1,0 +1,2 @@
+"""ChefMate agent evaluation package."""
+
