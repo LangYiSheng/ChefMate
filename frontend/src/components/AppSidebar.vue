@@ -23,16 +23,25 @@ const emit = defineEmits<{
   selectShortcut: [shortcutId: string]
 }>()
 
+const stageLabelMap: Record<ConversationRecord['stage'], string> = {
+  idea: '闲聊',
+  planning: '推荐中',
+  shopping: '备料中',
+  cooking: '烹饪中',
+}
+
 function conversationStageLabel(conversation: ConversationRecord) {
+  const stageLabel = stageLabelMap[conversation.stage]
+
   if (conversation.currentRecipe) {
-    return `${conversation.intentLabel} · ${conversation.currentRecipe}`
+    return `${stageLabel} · ${conversation.currentRecipe}`
   }
 
-  return conversation.intentLabel
+  return stageLabel
 }
 
 function conversationHeadline(conversation: ConversationRecord) {
-  return conversation.statusText
+  return conversation.title
 }
 
 function conversationMeta(conversation: ConversationRecord) {

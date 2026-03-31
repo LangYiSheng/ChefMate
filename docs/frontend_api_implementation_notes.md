@@ -9,32 +9,43 @@
 1. 每个对话都要维护一份最新的 `suggestions` 列表。
 2. `suggestions` 不是静态字段，而是智能体每次返回新消息时都可能更新。
 3. 前端应始终以“该对话最后一次智能体响应里返回的 `suggestions`”作为当前快捷建议。
-4. 当前前端 mock 代码里使用的是 `quickPrompts` 命名，后续接 API 时应映射到后端真实字段 `suggestions`。
-5. `taskSummary` 不作为用户界面展示字段，后续接口可以不返回；如果后端保留，也不应在前端主界面展示。
-6. 每个对话里，同一种卡片类型只保留最新的一个实例；如果同类型卡片有更新，旧卡片应从原位置消失，新卡片只显示在最新消息位置。
+4. 前端内部会话对象只保留当前界面真正需要的字段，不再额外维护 `status_text / intent_label / taskSummary / preview / updated_at` 这类冗余展示副本。
+5. 每个对话里，同一种卡片类型只保留最新的一个实例；如果同类型卡片有更新，旧卡片应从原位置消失，新卡片只显示在最新消息位置。
 
-## 对话对象建议结构
+## 前端内部会话结构建议
 
 ```ts
 type ConversationStage = 'idea' | 'planning' | 'shopping' | 'cooking'
 
-interface ConversationSummary {
+interface ConversationRecord {
   id: string
   title: string
-  status_text: string
   stage: ConversationStage
-  current_recipe_id?: number | null
   current_recipe_name?: string | null
-  updated_at: string
-  latest_suggestions: string[]
+  suggestions: string[]
+  messages: ConversationMessage[]
 }
 ```
 
 说明：
 
-- `status_text` 用于侧边栏主标题。
+- `title` 直接用于侧边栏主标题和聊天页头部标题。
 - `stage + current_recipe_name` 用于界面上的阶段说明，例如 `烹饪中 · 番茄炒蛋`。
-- `latest_suggestions` 是该对话当前可点击的建议列表。
+- `suggestions` 是该对话当前可点击的建议列表。
+- 不要把 `current_recipe_id` 当成对话状态字段。对话中的菜谱内容会被智能体动态修改，数据库菜谱只作为参考。
+- 如果后端返回了更多字段，前端可以在进入界面层之前先做一次 normalize，只保留这份最小结构。
+
+## 会话接口建议结构
+
+```ts
+interface ConversationSummary {
+  id: string
+  title: string
+  stage: ConversationStage
+  current_recipe_name?: string | null
+  suggestions: string[]
+}
+```
 
 ## 消息返回建议结构
 
@@ -199,6 +210,7 @@ interface CardActionEvent {
 3. 如果某个非当前对话正在倒计时，侧边栏应显示额外状态，例如：`烹饪中 · 番茄炒蛋 · 正在倒计时`。
 4. 倒计时结束时，前端应自动切换到对应对话，并聚焦该对话中的烹饪步骤卡。
 5. 用户设置里需要支持 `auto_start_step_timer` 开关，表示到达带计时步骤时是否自动开启计时器。
+6. 计时器当前是纯前端状态，不需要多端同步，也不需要后端保存或广播。
 
 ## 菜谱数据字段建议
 
@@ -305,9 +317,8 @@ interface SendMessageResponse {
 - `attachments`
 - `cards`
 - `suggestions`
-- `status_text`
+- `title`
 - `stage`
-- `current_recipe_id`
 - `current_recipe_name`
 
 ### 获取标签目录
@@ -486,9 +497,9 @@ interface UpdateProfileRequest {
 
 1. `suggestions` 一定要按对话维度维护，不能做成全局唯一一份。
 2. 智能体返回新消息时，除了追加消息本身，还要同步更新：
-   - `status_text`
+   - `title`
    - `stage`
-   - `current_recipe_id / current_recipe_name`
-   - `latest_suggestions`
+   - `current_recipe_name`
+   - `suggestions`
 3. 卡片按钮后续最好统一走 `action_type + payload`，不要长期依赖自然语言拼接。
-4. 计时器状态目前是前端维护，后续如果要多端同步，再考虑是否上升为服务端状态。
+4. 计时器状态目前明确只在前端维护，后端暂时不用管。

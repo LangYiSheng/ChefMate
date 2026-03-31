@@ -144,15 +144,10 @@ const braisedNoodlesRecipe = mockRecipes.find((recipe) => recipe.id === 105) ?? 
 const seedConversations: ConversationRecord[] = [
   {
     id: 'conversation-demo-cards',
-    title: '卡片总览演示',
-    statusText: '全部卡片演示，方便集中检查界面',
-    preview: '这一条对话会连续展示推荐、详情、备料、烹饪四类卡片。',
-    updatedAt: '刚刚',
+    title: '全部卡片演示，方便集中检查界面',
     stage: 'cooking',
-    intentLabel: '烹饪中',
     currentRecipe: tomatoRecipe.name,
-    taskSummary: '',
-    quickPrompts: ['再看一遍推荐卡', '切回备料阶段', '继续下一步'],
+    suggestions: ['再看一遍推荐卡', '切回备料阶段', '继续下一步'],
     messages: [
       {
         id: 'conversation-demo-cards-message-1',
@@ -216,14 +211,9 @@ const seedConversations: ConversationRecord[] = [
   },
   {
     id: 'conversation-1',
-    title: '周五晚饭安排',
-    statusText: '候选菜已经整理好了，等你拍板',
-    preview: '候选菜已经缩到三道，正在确认今天走哪条口味线。',
-    updatedAt: '3 分钟前',
+    title: '候选菜已经整理好了，等你拍板',
     stage: 'planning',
-    intentLabel: '推荐中',
-    taskSummary: '',
-    quickPrompts: ['告诉我更下饭的选项', '需要准备哪些食材', '再推荐一道汤菜'],
+    suggestions: ['告诉我更下饭的选项', '需要准备哪些食材', '再推荐一道汤菜'],
     messages: [
       {
         id: 'conversation-1-message-1',
@@ -249,15 +239,10 @@ const seedConversations: ConversationRecord[] = [
   },
   {
     id: 'conversation-2',
-    title: '冰箱清库存',
-    statusText: '食材比对完成，差一点就能开做',
-    preview: '已识别现有食材，正在判断哪些东西缺口最关键。',
-    updatedAt: '16 分钟前',
+    title: '食材比对完成，差一点就能开做',
     stage: 'shopping',
-    intentLabel: '备料中',
     currentRecipe: dryPotRecipe.name,
-    taskSummary: '',
-    quickPrompts: ['把缺料清单列出来', '按现有食材重算菜谱', '能不能换一道菜'],
+    suggestions: ['把缺料清单列出来', '按现有食材重算菜谱', '能不能换一道菜'],
     messages: [
       {
         id: 'conversation-2-message-1',
@@ -277,15 +262,10 @@ const seedConversations: ConversationRecord[] = [
   },
   {
     id: 'conversation-3',
-    title: '豆角焖面进行中',
-    statusText: '下一步准备开盖拌面',
-    preview: '当前在焖煮阶段，后面只需要继续跟进步骤和计时提醒。',
-    updatedAt: '1 小时前',
+    title: '下一步准备开盖拌面',
     stage: 'cooking',
-    intentLabel: '烹饪中',
     currentRecipe: braisedNoodlesRecipe.name,
-    taskSummary: '',
-    quickPrompts: ['下一步做什么', '帮我记 5 分钟', '面条太干怎么办'],
+    suggestions: ['下一步做什么', '帮我记 5 分钟', '面条太干怎么办'],
     messages: [
       {
         id: 'conversation-3-message-1',

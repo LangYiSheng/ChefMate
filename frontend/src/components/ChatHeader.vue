@@ -1,14 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-
-import type {
-  ConversationRecord,
-  ConversationTimerSlot,
-} from '../types/chat'
+import type { ConversationRecord, ConversationTimerSlot } from '../types/chat'
 
 const props = defineProps<{
   conversation: ConversationRecord
-  stageLabel: string
+  metaText: string
   timerSlot: ConversationTimerSlot | null
   timerNoticeText: string
   timerNoticeTone: 'info' | 'alert' | null
@@ -23,14 +18,6 @@ const emit = defineEmits<{
   cancelTimer: []
   dismissTimerNotice: []
 }>()
-
-const eyebrowText = computed(() => {
-  if (props.conversation.currentRecipe) {
-    return `${props.stageLabel} · ${props.conversation.currentRecipe}`
-  }
-
-  return props.stageLabel
-})
 
 function formatSeconds(seconds: number) {
   const minutes = Math.floor(seconds / 60)
@@ -49,7 +36,7 @@ function formatSeconds(seconds: number) {
       </button>
 
       <div class="title-group">
-        <p class="eyebrow">{{ eyebrowText }}</p>
+        <p class="eyebrow">{{ metaText }}</p>
         <h2>{{ conversation.title }}</h2>
       </div>
     </div>

@@ -20,7 +20,6 @@ import type {
   ChatAttachment,
   ChatMessage,
   ConversationRecord,
-  ConversationStage,
   ConversationTimerSlot,
   MessageCard,
   RecipeRecord,
@@ -28,15 +27,14 @@ import type {
   UserProfileSummary,
 } from './types/chat'
 
-const stageLabelMap: Record<ConversationStage, string> = {
+const draftConversationId = 'new'
+const draftSuggestions = ['今晚想吃点热乎的', '冰箱里有鸡蛋和番茄', '想做一道 20 分钟内的菜']
+const stageLabelMap: Record<ConversationRecord['stage'], string> = {
   idea: '闲聊',
   planning: '推荐中',
   shopping: '备料中',
   cooking: '烹饪中',
 }
-
-const draftConversationId = 'new'
-const draftQuickPrompts = ['今晚想吃点热乎的', '冰箱里有鸡蛋和番茄', '想做一道 20 分钟内的菜']
 const draftGreetingTemplates = {
   morning: ['早上好，{name}。', '新的一天开始啦，{name}。'],
   noon: ['中午好，{name}。', '午安，{name}。'],
@@ -130,32 +128,15 @@ const visibleConversation = computed<ConversationRecord | null>(() => {
 
   return {
     id: draftConversationId,
-    title: '新的对话',
-    statusText: '等你说一句想吃什么',
-    preview: '',
-    updatedAt: '刚刚',
+    title: '等你说一句想吃什么',
     stage: 'idea',
-    intentLabel: '闲聊',
-    taskSummary: '',
-    quickPrompts: draftQuickPrompts,
+    suggestions: draftSuggestions,
     messages: [],
   }
 })
 
-const activeStageLabel = computed(() => {
-  if (!visibleConversation.value) {
-    return ''
-  }
-
-  if (isDraftConversationRoute.value && !activeConversation.value) {
-    return '新对话'
-  }
-
-  return stageLabelMap[visibleConversation.value.stage]
-})
-
 const activeSuggestions = computed(
-  () => activeConversation.value?.quickPrompts ?? (isDraftConversationRoute.value ? draftQuickPrompts : []),
+  () => activeConversation.value?.suggestions ?? (isDraftConversationRoute.value ? draftSuggestions : []),
 )
 const isAuthRoute = computed(
   () => route.name === 'auth-login' || route.name === 'auth-register',
@@ -193,6 +174,22 @@ const activeTimerNotice = computed(() => {
   }
 
   return timerNotice.value
+})
+const activeConversationMeta = computed(() => {
+  if (!visibleConversation.value) {
+    return ''
+  }
+
+  const stageText =
+    visibleConversation.value.currentRecipe
+      ? `${stageLabelMap[visibleConversation.value.stage]} · ${visibleConversation.value.currentRecipe}`
+      : stageLabelMap[visibleConversation.value.stage]
+
+  if (activeTimerSlot.value?.status === 'running' && activeTimerSlot.value.remainingSeconds > 0) {
+    return `${stageText} · 正在倒计时`
+  }
+
+  return stageText
 })
 
 watch(
@@ -511,13 +508,8 @@ function createDraftConversation(prompt: string) {
   const conversation: ConversationRecord = {
     id: conversationId,
     title: promptPreview || `新的做饭任务 ${newConversationIndex}`,
-    statusText: '正在理解你的需求',
-    preview: trimmedPrompt,
-    updatedAt: '刚刚',
     stage: 'idea',
-    intentLabel: '闲聊',
-    taskSummary: '',
-    quickPrompts: draftQuickPrompts,
+    suggestions: draftSuggestions,
     messages: [],
   }
 
@@ -698,10 +690,9 @@ function buildAssistantResponse(
 ): {
   content: string
   cards: MessageCard[]
-  nextStage: ConversationStage
-  nextIntentLabel: string
-  statusText: string
-  quickPrompts: string[]
+  nextStage: ConversationRecord['stage']
+  nextTitle: string
+  suggestions: string[]
   currentRecipe?: string
 } {
   const normalizedPrompt = prompt.toLowerCase()
@@ -718,9 +709,8 @@ function buildAssistantResponse(
       content: `这是 ${referencedRecipe.name} 的详细做法。`,
       cards: [buildRecipeDetailCard(referencedRecipe)],
       nextStage: 'planning',
-      nextIntentLabel: '推荐中',
-      statusText: `正在查看 ${referencedRecipe.name} 的菜谱详情`,
-      quickPrompts: ['我想试试这道', '先看备料', '换一道类似的'],
+      nextTitle: `正在查看 ${referencedRecipe.name} 的菜谱详情`,
+      suggestions: ['我想试试这道', '先看备料', '换一道类似的'],
       currentRecipe: referencedRecipe.name,
     }
   }
@@ -730,9 +720,8 @@ function buildAssistantResponse(
       content: `先检查一下 ${referencedRecipe.name} 需要准备的材料。`,
       cards: [buildPantryCard(referencedRecipe)],
       nextStage: 'shopping',
-      nextIntentLabel: '备料中',
-      statusText: `${referencedRecipe.name} 的备料检查已经展开`,
-      quickPrompts: ['这些都备齐了', '再看看菜谱详情', '换一道类似的'],
+      nextTitle: `${referencedRecipe.name} 的备料检查已经展开`,
+      suggestions: ['这些都备齐了', '再看看菜谱详情', '换一道类似的'],
       currentRecipe: referencedRecipe.name,
     }
   }
@@ -742,9 +731,8 @@ function buildAssistantResponse(
       content: `已经切到 ${referencedRecipe.name} 的烹饪步骤。`,
       cards: [buildCookingGuideCard(referencedRecipe)],
       nextStage: 'cooking',
-      nextIntentLabel: '烹饪中',
-      statusText: `${referencedRecipe.name} 正在烹饪中`,
-      quickPrompts: ['下一步做什么', '这一步火候要多大', '需要计时多久'],
+      nextTitle: `${referencedRecipe.name} 正在烹饪中`,
+      suggestions: ['下一步做什么', '这一步火候要多大', '需要计时多久'],
       currentRecipe: referencedRecipe.name,
     }
   }
@@ -754,9 +742,8 @@ function buildAssistantResponse(
       content: '给你整理了几道更适合现在做的菜。',
       cards: [buildRecommendationCard()],
       nextStage: 'planning',
-      nextIntentLabel: '推荐中',
-      statusText: '候选菜已经整理好了，等你拍板',
-      quickPrompts: ['就做第一个', '按清淡一点再改一版', '告诉我需要准备什么'],
+      nextTitle: '候选菜已经整理好了，等你拍板',
+      suggestions: ['就做第一个', '按清淡一点再改一版', '告诉我需要准备什么'],
     }
   }
 
@@ -765,9 +752,8 @@ function buildAssistantResponse(
       content: '我把需要准备的材料重新整理好了。',
       cards: [buildPantryCard(referencedRecipe)],
       nextStage: 'shopping',
-      nextIntentLabel: '备料中',
-      statusText: `${referencedRecipe.name} 的备料检查已经展开`,
-      quickPrompts: ['生成补买清单', '按现有食材简化一下', '我想直接开始做'],
+      nextTitle: `${referencedRecipe.name} 的备料检查已经展开`,
+      suggestions: ['生成补买清单', '按现有食材简化一下', '我想直接开始做'],
       currentRecipe: referencedRecipe.name,
     }
   }
@@ -777,9 +763,8 @@ function buildAssistantResponse(
       content: '已经切到烹饪步骤了。',
       cards: [buildCookingGuideCard(referencedRecipe)],
       nextStage: 'cooking',
-      nextIntentLabel: '烹饪中',
-      statusText: `${referencedRecipe.name} 正在烹饪中`,
-      quickPrompts: ['下一步做什么', '帮我提醒焖 3 分钟', '这一步火候要多大'],
+      nextTitle: `${referencedRecipe.name} 正在烹饪中`,
+      suggestions: ['下一步做什么', '帮我提醒焖 3 分钟', '这一步火候要多大'],
       currentRecipe: referencedRecipe.name,
     }
   }
@@ -788,9 +773,8 @@ function buildAssistantResponse(
     content: '我先把你的意思记下来了，我们可以继续往下细化要做什么。',
     cards: [],
     nextStage: conversation.stage,
-    nextIntentLabel: conversation.intentLabel,
-    statusText: conversation.statusText,
-    quickPrompts: conversation.quickPrompts,
+    nextTitle: conversation.title,
+    suggestions: conversation.suggestions,
   }
 }
 
@@ -817,8 +801,7 @@ function sendMessage(payload: string | { prompt: string; attachments: ChatAttach
     attachments: hasAttachments ? attachments : undefined,
     createdAt: formatNow(),
   })
-  conversation.updatedAt = '刚刚'
-  conversation.preview = previewText
+  conversation.title = previewText
   typingConversationId.value = conversation.id
 
   if (pendingResponseTimer.value !== null) {
@@ -842,13 +825,9 @@ function sendMessage(payload: string | { prompt: string; attachments: ChatAttach
       createAssistantMessage(response.content, response.cards, formatNow()),
     )
     normalizeConversationCards([targetConversation])
-    targetConversation.updatedAt = '刚刚'
-    targetConversation.preview = response.content
     targetConversation.stage = response.nextStage
-    targetConversation.intentLabel = response.nextIntentLabel
-    targetConversation.statusText = response.statusText
-    targetConversation.taskSummary = ''
-    targetConversation.quickPrompts = response.quickPrompts
+    targetConversation.title = response.nextTitle
+    targetConversation.suggestions = response.suggestions
     targetConversation.currentRecipe = response.currentRecipe ?? targetConversation.currentRecipe
 
     if (typingConversationId.value === responseConversationId) {
@@ -963,15 +942,10 @@ function cancelTimer() {
 function startConversationFromRecipe(recipe: RecipeRecord) {
   const conversation: ConversationRecord = {
     id: `conversation-new-${newConversationIndex}`,
-    title: `${recipe.name} 备料对话`,
-    statusText: `已选中 ${recipe.name}，开始确认备料`,
-    preview: `已从菜谱详情进入 ${recipe.name} 的备料阶段。`,
-    updatedAt: '刚刚',
+    title: `已选中 ${recipe.name}，开始确认备料`,
     stage: 'shopping',
-    intentLabel: '备料中',
     currentRecipe: recipe.name,
-    taskSummary: '',
-    quickPrompts: ['这些都备齐了', '再看看菜谱详情', '按 1 人份调整一下'],
+    suggestions: ['这些都备齐了', '再看看菜谱详情', '按 1 人份调整一下'],
     messages: [
       {
         id: `conversation-new-${newConversationIndex}-assistant-1`,
@@ -1034,7 +1008,7 @@ function showRecipeLibrary() {
         <template v-else-if="visibleConversation">
           <ChatHeader
             :conversation="visibleConversation"
-            :stage-label="activeStageLabel"
+            :meta-text="activeConversationMeta"
             :timer-notice-needs-confirm="activeTimerNotice?.needsConfirm ?? false"
             :timer-notice-text="activeTimerNotice?.text ?? ''"
             :timer-notice-tone="activeTimerNotice?.tone ?? null"

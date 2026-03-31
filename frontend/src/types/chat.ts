@@ -33,14 +33,9 @@ export interface UserProfileSummary {
 export interface ConversationRecord {
   id: string
   title: string
-  statusText: string
-  preview: string
-  updatedAt: string
   stage: ConversationStage
-  intentLabel: string
   currentRecipe?: string
-  taskSummary: string
-  quickPrompts: string[]
+  suggestions: string[]
   messages: ChatMessage[]
 }
 
