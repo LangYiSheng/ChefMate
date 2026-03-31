@@ -216,5 +216,24 @@ class RecipeRepository:
         taxonomy["difficulty"] = ["简单", "中等", "困难"]
         return dict(taxonomy)
 
+    def get_tag_ids_by_names(self, tag_names: list[str]) -> list[int]:
+        if not tag_names:
+            return []
+        query = (
+            text(
+                """
+                SELECT id
+                FROM recipe_tag
+                WHERE tag_name IN :tag_names
+                  AND is_enabled = 1
+                ORDER BY id
+                """
+            )
+            .bindparams(bindparam("tag_names", expanding=True))
+        )
+        with engine.connect() as conn:
+            rows = conn.execute(query, {"tag_names": tag_names}).scalars().all()
+        return [int(item) for item in rows]
+
 
 recipe_repository = RecipeRepository()

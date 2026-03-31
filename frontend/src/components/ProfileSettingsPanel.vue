@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import type { TagCatalog, TagCategoryKey, UserProfileSummary } from '../types/chat'
 
@@ -11,6 +11,14 @@ const props = defineProps<{
 const emit = defineEmits<{
   updateAllowAutoUpdate: [value: boolean]
   updateAutoStartStepTimer: [value: boolean]
+  saveProfile: [payload: {
+    allowAutoUpdate: boolean
+    autoStartStepTimer: boolean
+    cookingPreferenceText: string
+    tagSelections: TagCatalog
+    displayName: string
+    email: string
+  }]
   logout: []
 }>()
 
@@ -32,21 +40,32 @@ const categoryMeta: Array<{ key: TagCategoryKey; label: string }> = [
 
 const activeTab = ref<(typeof tabs)[number]['id']>('profile')
 const selectedTags = ref<TagCatalog>({
-  flavor: [...props.userProfile.tagSelections.flavor],
-  method: [...props.userProfile.tagSelections.method],
-  scene: [...props.userProfile.tagSelections.scene],
-  health: [...props.userProfile.tagSelections.health],
-  time: [...props.userProfile.tagSelections.time],
-  tool: [...props.userProfile.tagSelections.tool],
+  flavor: [],
+  method: [],
+  scene: [],
+  health: [],
+  time: [],
+  tool: [],
 })
-const cookingPreferenceText = ref(props.userProfile.cookingPreferenceText)
-const allowAutoUpdate = ref(props.userProfile.allowAutoUpdate)
-const autoStartStepTimer = ref(props.userProfile.autoStartStepTimer)
-const displayName = ref(props.userProfile.name)
-const accountEmail = ref(props.userProfile.email)
+const cookingPreferenceText = ref('')
+const allowAutoUpdate = ref(true)
+const autoStartStepTimer = ref(false)
+const displayName = ref('')
+const accountEmail = ref('')
 const logoutConfirmOpen = ref(false)
 
 const selectedTagCount = computed(() => Object.values(selectedTags.value).flat().length)
+
+function normalizeSelections(source: UserProfileSummary['tagSelections']): TagCatalog {
+  return {
+    flavor: source.flavor.filter((tag) => props.tagCatalog.flavor.includes(tag)),
+    method: source.method.filter((tag) => props.tagCatalog.method.includes(tag)),
+    scene: source.scene.filter((tag) => props.tagCatalog.scene.includes(tag)),
+    health: source.health.filter((tag) => props.tagCatalog.health.includes(tag)),
+    time: source.time.filter((tag) => props.tagCatalog.time.includes(tag)),
+    tool: source.tool.filter((tag) => props.tagCatalog.tool.includes(tag)),
+  }
+}
 
 function toggleTag(category: TagCategoryKey, tag: string) {
   const currentTags = selectedTags.value[category]
@@ -85,6 +104,30 @@ function confirmLogout() {
   logoutConfirmOpen.value = false
   emit('logout')
 }
+
+function saveProfile() {
+  emit('saveProfile', {
+    allowAutoUpdate: allowAutoUpdate.value,
+    autoStartStepTimer: autoStartStepTimer.value,
+    cookingPreferenceText: cookingPreferenceText.value.trim(),
+    tagSelections: selectedTags.value,
+    displayName: displayName.value.trim(),
+    email: accountEmail.value.trim(),
+  })
+}
+
+watch(
+  () => [props.userProfile, props.tagCatalog] as const,
+  ([profile]) => {
+    selectedTags.value = normalizeSelections(profile.tagSelections)
+    cookingPreferenceText.value = profile.cookingPreferenceText
+    allowAutoUpdate.value = profile.allowAutoUpdate
+    autoStartStepTimer.value = profile.autoStartStepTimer
+    displayName.value = profile.name
+    accountEmail.value = profile.email
+  },
+  { immediate: true, deep: true },
+)
 </script>
 
 <template>
@@ -165,6 +208,10 @@ function confirmLogout() {
                 <span>偏好描述</span>
                 <textarea v-model="cookingPreferenceText" rows="6"></textarea>
               </label>
+
+              <div class="action-row">
+                <button type="button" class="primary-button" @click="saveProfile">保存偏好档案</button>
+              </div>
             </section>
           </section>
         </div>
@@ -203,6 +250,10 @@ function confirmLogout() {
                   <span></span>
                 </button>
               </div>
+
+              <div class="action-row">
+                <button type="button" class="primary-button" @click="saveProfile">保存设置</button>
+              </div>
             </section>
           </section>
         </div>
@@ -239,7 +290,7 @@ function confirmLogout() {
               </label>
 
               <div class="action-row">
-                <button type="button" class="primary-button">保存显示名称</button>
+                <button type="button" class="primary-button" @click="saveProfile">保存账户信息</button>
                 <button type="button" class="secondary-button">重设密码</button>
                 <button type="button" class="danger-button" @click="openLogoutConfirm">退出登录</button>
               </div>

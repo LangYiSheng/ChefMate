@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 
-import type { PantryStatusCard as PantryStatusCardType } from '../../types/chat'
+import type { CardActionEvent, PantryStatusCard as PantryStatusCardType } from '../../types/chat'
 
 const props = defineProps<{
   card: PantryStatusCardType
 }>()
 
 const emit = defineEmits<{
-  action: [message: string]
+  action: [action: CardActionEvent]
 }>()
 
 const flashMode = ref(false)
@@ -115,7 +115,7 @@ function moveFlash(offset: number) {
         :key="action.id"
         type="button"
         class="primary-button"
-        @click="emit('action', action.message)"
+        @click="emit('action', { actionType: action.actionType, payload: action.payload })"
       >
         {{ action.label }}
       </button>

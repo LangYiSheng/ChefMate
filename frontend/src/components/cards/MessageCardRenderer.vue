@@ -4,6 +4,7 @@ import PantryStatusCard from './PantryStatusCard.vue'
 import RecipeDetailCard from './RecipeDetailCard.vue'
 import RecipeRecommendationsCard from './RecipeRecommendationsCard.vue'
 import type {
+  CardActionEvent,
   CookingGuideCard as CookingGuideCardType,
   MessageCard,
   PantryStatusCard as PantryStatusCardType,
@@ -18,7 +19,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  action: [message: string]
+  action: [action: CardActionEvent]
   startTimer: [payload: TimerRequest]
 }>()
 

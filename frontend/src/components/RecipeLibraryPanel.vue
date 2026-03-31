@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 
-import type { RecipeRecord } from '../types/chat'
+import { fetchRecipes } from '../lib/api'
+import { getAuthToken } from '../state/auth'
+import type { RecipeRecord, RecipeSearchField } from '../types/chat'
 
 const props = defineProps<{
   recipes: RecipeRecord[]
+  selectedRecipe?: RecipeRecord | null
   selectedRecipeId?: number | null
+  recommendationSeed?: string
 }>()
 
 const emit = defineEmits<{
@@ -15,42 +19,88 @@ const emit = defineEmits<{
   toggleSidebar: []
 }>()
 
+const searchFieldOptions: Array<{ value: RecipeSearchField; label: string }> = [
+  { value: 'name', label: '菜名' },
+  { value: 'ingredient', label: '食材' },
+  { value: 'method', label: '做法' },
+  { value: 'flavor', label: '口味' },
+]
+
 const searchQuery = ref('')
+const submittedSearchQuery = ref('')
+const selectedSearchFields = ref<RecipeSearchField[]>(['name', 'ingredient', 'method', 'flavor'])
+const submittedSearchFields = ref<RecipeSearchField[]>(['name', 'ingredient', 'method', 'flavor'])
+const libraryRecipes = ref<RecipeRecord[]>([])
+const recentRecipes = ref<RecipeRecord[]>([])
+const libraryLoading = ref(false)
+const libraryError = ref('')
 
-const normalizedSearch = computed(() => searchQuery.value.trim().toLowerCase())
+const normalizedSearch = computed(() => searchQuery.value.trim())
+const isSearching = computed(() => submittedSearchQuery.value.length > 0)
+const activeSearchFieldLabels = computed(() =>
+  searchFieldOptions
+    .filter((option) => submittedSearchFields.value.includes(option.value))
+    .map((option) => option.label)
+    .join('、'),
+)
 
-const filteredRecipes = computed(() => {
-  if (!normalizedSearch.value) {
-    return props.recipes
-  }
-
-  return props.recipes.filter((recipe) => {
-    const haystack = [
-      recipe.name,
-      recipe.description,
-      recipe.tags.join(' '),
-      recipe.ingredients.map((ingredient) => ingredient.ingredientName).join(' '),
-    ]
-      .join(' ')
-      .toLowerCase()
-
-    return haystack.includes(normalizedSearch.value)
-  })
-})
-
-const recentRecipes = computed(() => props.recipes.filter((recipe) => recipe.recentActivity).slice(0, 3))
-
-const recommendedRecipes = computed(() => {
-  if (normalizedSearch.value) {
-    return filteredRecipes.value
-  }
-
-  return props.recipes.slice(0, 6)
-})
+const recommendedRecipes = computed(() => libraryRecipes.value)
 
 const selectedRecipe = computed(
-  () => props.recipes.find((recipe) => recipe.id === props.selectedRecipeId) ?? null,
+  () => props.selectedRecipe ?? props.recipes.find((recipe) => recipe.id === props.selectedRecipeId) ?? null,
 )
+
+async function loadLibraryRecipes() {
+  const token = getAuthToken()
+  if (!token) {
+    return
+  }
+
+  libraryLoading.value = true
+  libraryError.value = ''
+
+  try {
+    const response = await fetchRecipes(token, {
+      keyword: isSearching.value ? submittedSearchQuery.value : undefined,
+      searchFields: isSearching.value ? submittedSearchFields.value : undefined,
+      limit: isSearching.value ? 24 : 6,
+      offset: 0,
+    })
+    libraryRecipes.value = response.items
+    recentRecipes.value = response.recentItems
+  } catch (error) {
+    libraryError.value = error instanceof Error ? error.message : '菜谱加载失败，请稍后再试。'
+    libraryRecipes.value = []
+    recentRecipes.value = []
+  } finally {
+    libraryLoading.value = false
+  }
+}
+
+function submitSearch() {
+  submittedSearchQuery.value = normalizedSearch.value
+  submittedSearchFields.value = [...selectedSearchFields.value]
+  void loadLibraryRecipes()
+}
+
+function resetSearch() {
+  searchQuery.value = ''
+  submittedSearchQuery.value = ''
+  submittedSearchFields.value = [...selectedSearchFields.value]
+  void loadLibraryRecipes()
+}
+
+function toggleSearchField(field: RecipeSearchField) {
+  if (selectedSearchFields.value.includes(field)) {
+    if (selectedSearchFields.value.length === 1) {
+      return
+    }
+    selectedSearchFields.value = selectedSearchFields.value.filter((item) => item !== field)
+    return
+  }
+
+  selectedSearchFields.value = [...selectedSearchFields.value, field]
+}
 
 function openRecipe(recipeId: number) {
   emit('selectRecipe', recipeId)
@@ -79,6 +129,19 @@ function formatTimer(seconds?: number | null) {
 
   return `${Math.round(seconds / 60)} 分钟`
 }
+
+watch(
+  () => props.recommendationSeed,
+  () => {
+    if (!isSearching.value) {
+      void loadLibraryRecipes()
+    }
+  },
+)
+
+onMounted(() => {
+  void loadLibraryRecipes()
+})
 </script>
 
 <template>
@@ -115,12 +178,38 @@ function formatTimer(seconds?: number | null) {
             v-model="searchQuery"
             class="search-input"
             type="search"
-            placeholder="搜索菜名、食材、做法或口味关键词"
+            placeholder="输入关键词，从全部菜谱中搜索"
+            @keydown.enter.prevent="submitSearch"
           />
+
+          <div class="search-field-row">
+            <button
+              v-for="option in searchFieldOptions"
+              :key="option.value"
+              type="button"
+              class="field-chip"
+              :class="{ active: selectedSearchFields.includes(option.value) }"
+              @click="toggleSearchField(option.value)"
+            >
+              {{ option.label }}
+            </button>
+          </div>
+
+          <div class="search-action-row">
+            <button type="button" class="search-button" @click="submitSearch">搜索菜谱</button>
+            <button
+              v-if="isSearching"
+              type="button"
+              class="search-button search-button-ghost"
+              @click="resetSearch"
+            >
+              恢复推荐
+            </button>
+          </div>
         </div>
 
         <div class="library-scroll hover-scroll">
-          <section class="section-block">
+          <section v-if="recentRecipes.length" class="section-block">
             <div class="section-head">
               <h3>最近尝试过的菜谱</h3>
               <p>快速回到最近浏览或做过的菜谱。</p>
@@ -143,11 +232,23 @@ function formatTimer(seconds?: number | null) {
 
           <section class="section-block">
             <div class="section-head">
-              <h3>{{ normalizedSearch ? '搜索结果' : '推荐菜谱' }}</h3>
-              <p>{{ normalizedSearch ? `共找到 ${recommendedRecipes.length} 道菜谱` : '从家常、快手和高频口味里先给你几道' }}</p>
+              <h3>{{ isSearching ? '搜索结果' : '推荐菜谱' }}</h3>
+              <p>
+                {{
+                  isSearching
+                    ? `共找到 ${recommendedRecipes.length} 道菜谱，搜索范围：${activeSearchFieldLabels}`
+                    : '这 6 道推荐会优先参考你的长期记忆标签和常见偏好。'
+                }}
+              </p>
             </div>
 
-            <div class="recipe-grid">
+            <div v-if="libraryLoading" class="state-card">正在加载菜谱...</div>
+            <div v-else-if="libraryError" class="state-card state-card-error">{{ libraryError }}</div>
+            <div v-else-if="!recommendedRecipes.length" class="state-card">
+              {{ isSearching ? '没有找到符合条件的菜谱，换个关键词或搜索范围试试。' : '暂时还没有可推荐的菜谱。' }}
+            </div>
+
+            <div v-else class="recipe-grid">
               <button
                 v-for="recipe in recommendedRecipes"
                 :key="recipe.id"
@@ -369,6 +470,50 @@ function formatTimer(seconds?: number | null) {
   background: rgba(255, 252, 247, 0.9);
 }
 
+.search-field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.8rem;
+}
+
+.field-chip {
+  padding: 0.42rem 0.78rem;
+  border: 1px solid rgba(47, 93, 80, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 252, 247, 0.82);
+  color: var(--color-text-soft);
+  cursor: pointer;
+}
+
+.field-chip.active {
+  background: rgba(47, 93, 80, 0.1);
+  color: var(--color-accent);
+  border-color: rgba(47, 93, 80, 0.22);
+}
+
+.search-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 0.9rem;
+}
+
+.search-button {
+  min-height: 2.6rem;
+  padding: 0 1rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(47, 93, 80, 0.96), rgba(32, 57, 49, 0.96));
+  color: #fef7ef;
+  cursor: pointer;
+}
+
+.search-button-ghost {
+  background: rgba(255, 252, 247, 0.88);
+  border: 1px solid rgba(47, 93, 80, 0.12);
+  color: var(--color-accent);
+}
+
 .library-scroll,
 .detail-scroll {
   min-height: 0;
@@ -413,6 +558,21 @@ function formatTimer(seconds?: number | null) {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.8rem;
   margin-top: 1rem;
+}
+
+.state-card {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px dashed rgba(47, 93, 80, 0.18);
+  border-radius: 1rem;
+  background: rgba(255, 252, 247, 0.7);
+  color: var(--color-text-soft);
+}
+
+.state-card-error {
+  border-style: solid;
+  border-color: rgba(160, 85, 34, 0.16);
+  color: #8f4a1e;
 }
 
 .recent-grid {

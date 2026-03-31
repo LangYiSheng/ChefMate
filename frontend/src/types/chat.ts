@@ -3,6 +3,9 @@ export type ConversationStage = 'idea' | 'planning' | 'shopping' | 'cooking'
 export type MessageRole = 'user' | 'assistant' | 'system'
 
 export type TagCategoryKey = 'flavor' | 'method' | 'scene' | 'health' | 'time' | 'tool'
+export type RecipeSearchField = 'name' | 'ingredient' | 'method' | 'flavor'
+
+export type CardActionType = 'view_recipe' | 'try_recipe' | 'ingredients_ready' | 'open_timer'
 
 export interface NavShortcut {
   id: string
@@ -28,6 +31,8 @@ export interface UserProfileSummary {
   autoStartStepTimer: boolean
   cookingPreferenceText: string
   tagSelections: TagCatalog
+  hasCompletedWorkspaceOnboarding?: boolean
+  profileCompletedAt?: string | null
 }
 
 export interface ConversationRecord {
@@ -46,6 +51,7 @@ export interface ChatMessage {
   createdAt: string
   attachments?: ChatAttachment[]
   cards?: MessageCard[]
+  suggestions?: string[]
 }
 
 export interface ChatAttachment {
@@ -53,12 +59,18 @@ export interface ChatAttachment {
   kind: 'image'
   name: string
   previewUrl: string
+  fileId?: string
+  fileUrl?: string
 }
 
-export interface CardAction {
+export interface CardActionEvent {
+  actionType: CardActionType
+  payload: Record<string, unknown>
+}
+
+export interface CardAction extends CardActionEvent {
   id: string
   label: string
-  message: string
   tone?: 'primary' | 'secondary' | 'ghost'
 }
 
@@ -85,7 +97,6 @@ export type MessageCard =
 export interface RecipeRecommendationsCard {
   type: 'recipe-recommendations'
   title: string
-  summary: string
   recipes: RecipeRecommendation[]
 }
 
@@ -97,14 +108,11 @@ export interface RecipeRecommendation {
   difficulty: RecipeRecord['difficulty']
   estimatedMinutes: number
   servings: number
-  detailAction: CardAction
-  tryAction: CardAction
+  actions: CardAction[]
 }
 
 export interface RecipeDetailCard {
   type: 'recipe-detail'
-  title: string
-  summary: string
   recipe: RecipeRecord
   actions: CardAction[]
 }
@@ -112,7 +120,6 @@ export interface RecipeDetailCard {
 export interface PantryStatusCard {
   type: 'pantry-status'
   title: string
-  summary: string
   checklist: PantryChecklistItem[]
   actions: CardAction[]
 }
@@ -121,15 +128,14 @@ export interface PantryChecklistItem {
   id: string
   ingredient: string
   amount: string
-  status: 'ready' | 'pending'
-  note: string
+  status: 'ready' | 'pending' | 'skipped'
+  note?: string
   isOptional?: boolean
 }
 
 export interface CookingGuideCard {
   type: 'cooking-guide'
   title: string
-  summary: string
   currentStep: number
   totalSteps: number
   steps: CookingGuideStep[]
@@ -142,7 +148,7 @@ export interface CookingGuideStep {
   duration: string
   timerSeconds?: number | null
   notes?: string
-  status: 'done' | 'current' | 'upcoming'
+  status: 'done' | 'current' | 'pending' | 'upcoming'
 }
 
 export interface RecipeRecord {

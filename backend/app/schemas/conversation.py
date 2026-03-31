@@ -1,25 +1,35 @@
-from pydantic import BaseModel
+from __future__ import annotations
 
-from app.core.semantic_models import ConversationStage, TaskSnapshot, WorkflowCard
+from typing import Literal
+
+from pydantic import BaseModel, Field
+
+from app.domain.enums import AttachmentKind
+from app.domain.models import ConversationDetail, ConversationMessage, ConversationSummary, SendMessageAction
 
 
 class ConversationCreateRequest(BaseModel):
-    user_id: str
-    title: str | None = None
+    source: Literal["manual", "recipe"] | None = "manual"
+    recipe_id: int | None = None
+
+
+class UploadedAttachmentInput(BaseModel):
+    kind: AttachmentKind
+    file_id: str | None = None
+    file_url: str | None = None
+    name: str | None = None
+
+
+class SendMessageRequest(BaseModel):
+    content: str | None = None
+    attachments: list[UploadedAttachmentInput] = Field(default_factory=list)
+    action: SendMessageAction | None = None
+
+
+class SendMessageResponse(BaseModel):
+    conversation: ConversationSummary
+    message: ConversationMessage
 
 
 class ConversationCreateResponse(BaseModel):
-    conversation_id: str
-    title: str
-    stage: ConversationStage
-
-
-class MessageRequest(BaseModel):
-    content: str
-
-
-class MessageResponse(BaseModel):
-    conversation_id: str
-    task: TaskSnapshot
-    assistant_message: str
-    card: WorkflowCard | None = None
+    conversation: ConversationDetail

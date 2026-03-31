@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, useTemplateRef, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import AppSidebar from './components/AppSidebar.vue'
@@ -12,23 +12,41 @@ import OverlayDialog from './components/OverlayDialog.vue'
 import ProfileSettingsPanel from './components/ProfileSettingsPanel.vue'
 import RecipeLibraryPanel from './components/RecipeLibraryPanel.vue'
 import WorkspaceOnboardingModal from './components/WorkspaceOnboardingModal.vue'
-import { buildMockConversations, sidebarShortcuts, userProfile } from './data/mockChat'
-import { mockRecipes } from './data/mockRecipes'
-import { tagCatalog } from './data/tagCatalog'
-import { clearAuthSession, getAuthSession, updateAuthSession } from './state/auth'
+import {
+  createConversation,
+  fetchConversation,
+  fetchConversations,
+  fetchProfile,
+  fetchRecipe,
+  fetchTagCatalog,
+  logout as requestLogout,
+  streamConversationMessage,
+  toBackendActionPayload,
+  updateProfile,
+} from './lib/api'
+import { clearAuthSession, getAuthSession, getAuthToken, updateAuthSession } from './state/auth'
 import type {
+  CardActionEvent,
   ChatAttachment,
   ChatMessage,
   ConversationRecord,
   ConversationTimerSlot,
   MessageCard,
   RecipeRecord,
+  TagCatalog,
   TimerRequest,
   UserProfileSummary,
 } from './types/chat'
 
 const draftConversationId = 'new'
-const draftSuggestions = ['今晚想吃点热乎的', '冰箱里有鸡蛋和番茄', '想做一道 20 分钟内的菜']
+const draftSuggestions = ['今晚想吃点热乎的', '冰箱里有鸡蛋和番茄', '帮我推荐一道快手菜']
+const sidebarShortcuts = [
+  {
+    id: 'recipes',
+    label: '菜谱',
+    caption: '手动浏览全部菜谱',
+  },
+]
 const stageLabelMap: Record<ConversationRecord['stage'], string> = {
   idea: '闲聊',
   planning: '推荐中',
@@ -44,15 +62,44 @@ const draftGreetingTemplates = {
 
 const route = useRoute()
 const router = useRouter()
-const conversations = ref<ConversationRecord[]>(normalizeConversationCards(buildMockConversations()))
-const profile = ref<UserProfileSummary>(structuredClone(userProfile))
-const activeConversationId = ref(conversations.value[0]?.id ?? '')
+const conversations = ref<ConversationRecord[]>([])
+const recipes = ref<RecipeRecord[]>([])
+const profile = ref<UserProfileSummary>({
+  name: '朋友',
+  level: 'ChefMate 用户',
+  account: '',
+  email: '',
+  allowAutoUpdate: true,
+  autoStartStepTimer: false,
+  cookingPreferenceText: '',
+  tagSelections: {
+    flavor: [],
+    method: [],
+    scene: [],
+    health: [],
+    time: [],
+    tool: [],
+  },
+})
+const tagCatalog = ref<TagCatalog>({
+  flavor: [],
+  method: [],
+  scene: [],
+  health: [],
+  time: [],
+  tool: [],
+})
+const loadedConversationIds = ref<Record<string, boolean>>({})
+const loadedRecipeIds = ref<Record<number, boolean>>({})
+const activeConversationId = ref('')
 const sidebarOpen = ref(false)
 const profilePanelOpen = ref(false)
 const workspaceOnboardingOpen = ref(false)
 const typingConversationId = ref<string | null>(null)
+const streamingStatusText = ref('')
 const draftGreeting = ref('')
-const pendingResponseTimer = ref<number | null>(null)
+const loadingWorkspace = ref(false)
+const workspaceInitialized = ref(false)
 const conversationTimers = ref<Record<string, ConversationTimerSlot>>({})
 const pendingTimerReplacement = ref<TimerRequest | null>(null)
 const timerNotice = ref<{
@@ -62,31 +109,8 @@ const timerNotice = ref<{
   needsConfirm: boolean
 } | null>(null)
 const messageViewport = useTemplateRef<HTMLDivElement>('messageViewport')
-let newConversationIndex = 1
 let countdownTicker: number | null = null
 let timerNoticeTimeout: number | null = null
-
-function syncProfileFromAuthSession() {
-  const authSession = getAuthSession()
-  if (!authSession) {
-    workspaceOnboardingOpen.value = false
-    return
-  }
-
-  profile.value.name = authSession.username
-  profile.value.account = authSession.username
-  profile.value.email = authSession.email ?? profile.value.email
-  refreshDraftGreeting()
-
-  if (
-    route.name &&
-    route.name !== 'auth-login' &&
-    route.name !== 'auth-register' &&
-    !authSession.hasCompletedWorkspaceOnboarding
-  ) {
-    workspaceOnboardingOpen.value = true
-  }
-}
 
 function refreshDraftGreeting() {
   const displayName = profile.value.name?.trim() || '朋友'
@@ -98,6 +122,104 @@ function refreshDraftGreeting() {
     templates[Math.floor(Math.random() * templates.length)] ?? '欢迎回来，{name}。'
 
   draftGreeting.value = randomTemplate.replace('{name}', displayName)
+}
+
+async function loadWorkspaceData() {
+  const token = getAuthToken()
+  if (!token || isAuthRoute.value) {
+    return
+  }
+
+  loadingWorkspace.value = true
+  try {
+    const [nextProfile, nextTagCatalog, nextConversations] = await Promise.all([
+      fetchProfile(token),
+      fetchTagCatalog(token),
+      fetchConversations(token),
+    ])
+    profile.value = nextProfile
+    tagCatalog.value = nextTagCatalog
+    conversations.value = normalizeConversationCards(nextConversations)
+    refreshDraftGreeting()
+    workspaceInitialized.value = true
+    updateAuthSession({
+      displayName: nextProfile.name,
+      email: nextProfile.email || null,
+      hasCompletedWorkspaceOnboarding: nextProfile.hasCompletedWorkspaceOnboarding,
+      profileCompletedAt: nextProfile.profileCompletedAt ?? null,
+    })
+    workspaceOnboardingOpen.value = !nextProfile.hasCompletedWorkspaceOnboarding && !isAuthRoute.value
+  } catch (error) {
+    await logout()
+    throw error
+  } finally {
+    loadingWorkspace.value = false
+  }
+}
+
+function upsertConversation(conversation: ConversationRecord, replaceMessages = false) {
+  const index = conversations.value.findIndex((item) => item.id === conversation.id)
+  if (index < 0) {
+    conversations.value.unshift(conversation)
+  } else {
+    const current = conversations.value[index]
+    conversations.value[index] = normalizeConversationCards([
+      {
+        ...current,
+        ...conversation,
+        messages: replaceMessages ? conversation.messages : current.messages,
+      },
+    ])[0]
+  }
+}
+
+function upsertRecipe(recipe: RecipeRecord) {
+  const index = recipes.value.findIndex((item) => item.id === recipe.id)
+  if (index < 0) {
+    recipes.value.unshift(recipe)
+  } else {
+    recipes.value[index] = {
+      ...recipes.value[index],
+      ...recipe,
+    }
+  }
+}
+
+async function ensureConversationLoaded(conversationId: string) {
+  if (loadedConversationIds.value[conversationId]) {
+    return
+  }
+  const token = getAuthToken()
+  if (!token) {
+    return
+  }
+  const detail = await fetchConversation(token, conversationId)
+  upsertConversation(detail, true)
+  loadedConversationIds.value[conversationId] = true
+}
+
+async function syncConversationFromBackend(conversationId: string) {
+  const token = getAuthToken()
+  if (!token) {
+    return null
+  }
+  const detail = await fetchConversation(token, conversationId)
+  upsertConversation(detail, true)
+  loadedConversationIds.value[conversationId] = true
+  return detail
+}
+
+async function ensureRecipeLoaded(recipeId: number) {
+  if (loadedRecipeIds.value[recipeId]) {
+    return
+  }
+  const token = getAuthToken()
+  if (!token) {
+    return
+  }
+  const detail = await fetchRecipe(token, recipeId)
+  upsertRecipe(detail)
+  loadedRecipeIds.value[recipeId] = true
 }
 
 const activeConversation = computed(
@@ -136,7 +258,7 @@ const visibleConversation = computed<ConversationRecord | null>(() => {
 })
 
 const activeSuggestions = computed(
-  () => activeConversation.value?.suggestions ?? (isDraftConversationRoute.value ? draftSuggestions : []),
+  () => visibleConversation.value?.suggestions ?? (isDraftConversationRoute.value ? draftSuggestions : []),
 )
 const isAuthRoute = computed(
   () => route.name === 'auth-login' || route.name === 'auth-register',
@@ -156,11 +278,15 @@ const activeRecipeId = computed(() => {
   return Number.isFinite(recipeId) ? recipeId : null
 })
 
-const isTyping = computed(
-  () => activeConversation.value !== null && typingConversationId.value === activeConversation.value.id,
+const selectedRecipe = computed(
+  () => recipes.value.find((recipe) => recipe.id === activeRecipeId.value) ?? null,
 )
 
-const isComposerDisabled = computed(() => isTyping.value)
+const isTyping = computed(
+  () => visibleConversation.value !== null && typingConversationId.value === visibleConversation.value.id,
+)
+
+const isComposerDisabled = computed(() => isTyping.value || loadingWorkspace.value)
 const activeTimerSlot = computed(() => {
   if (!activeConversationId.value) {
     return null
@@ -194,8 +320,15 @@ const activeConversationMeta = computed(() => {
 
 watch(
   () => route.name,
-  () => {
-    syncProfileFromAuthSession()
+  async () => {
+    refreshDraftGreeting()
+    if (!isAuthRoute.value && getAuthToken() && !workspaceInitialized.value) {
+      try {
+        await loadWorkspaceData()
+      } catch {
+        // ignore bootstrap errors; logout flow already handles cleanup
+      }
+    }
   },
   { immediate: true },
 )
@@ -219,7 +352,7 @@ watch(
 )
 
 watch(
-  () => [route.name, route.params.conversationId] as const,
+  () => [route.name, route.params.conversationId, conversations.value.length] as const,
   async ([routeName, routeConversationId]) => {
     if (routeName !== 'chat') {
       return
@@ -229,40 +362,35 @@ watch(
       ? routeConversationId[0]
       : routeConversationId
 
-    if (normalizedConversationId === draftConversationId) {
-      activeConversationId.value = ''
-      await nextTick()
-      if (messageViewport.value) {
-        messageViewport.value.scrollTo({ top: 0, behavior: 'auto' })
+    if (normalizedConversationId === draftConversationId || !normalizedConversationId) {
+      if (!conversations.value.length || normalizedConversationId === draftConversationId) {
+        activeConversationId.value = ''
+        if (normalizedConversationId !== draftConversationId) {
+          await router.replace({
+            name: 'chat',
+            params: { conversationId: draftConversationId },
+          })
+        }
+        return
+      }
+      activeConversationId.value = conversations.value[0]?.id ?? ''
+      if (activeConversationId.value) {
+        await router.replace({
+          name: 'chat',
+          params: { conversationId: activeConversationId.value },
+        })
       }
       return
     }
 
-    if (normalizedConversationId) {
-      const matchedConversation = conversations.value.find(
-        (conversation) => conversation.id === normalizedConversationId,
-      )
-
-      if (matchedConversation) {
-        activeConversationId.value = matchedConversation.id
-        return
-      }
-    }
-
-    const fallbackConversationId = conversations.value[0]?.id
-    if (fallbackConversationId) {
-      activeConversationId.value = fallbackConversationId
-      await router.replace({
-        name: 'chat',
-        params: { conversationId: fallbackConversationId },
-      })
-    }
+    activeConversationId.value = normalizedConversationId
+    await ensureConversationLoaded(normalizedConversationId)
   },
   { immediate: true },
 )
 
 watch(
-  () => activeConversation.value?.messages.length ?? 0,
+  () => visibleConversation.value?.messages.length ?? 0,
   async () => {
     await nextTick()
     scrollToBottom('smooth')
@@ -270,25 +398,27 @@ watch(
 )
 
 watch(
-  isDraftConversationRoute,
-  async (isDraftRoute) => {
-    if (!isDraftRoute) {
-      return
-    }
-
-    refreshDraftGreeting()
-    await nextTick()
-    if (messageViewport.value) {
-      messageViewport.value.scrollTo({ top: 0, behavior: 'auto' })
+  () => activeRecipeId.value,
+  async (recipeId) => {
+    if (recipeId) {
+      await ensureRecipeLoaded(recipeId)
     }
   },
+  { immediate: true },
 )
 
-onBeforeUnmount(() => {
-  if (pendingResponseTimer.value !== null) {
-    window.clearTimeout(pendingResponseTimer.value)
+onMounted(async () => {
+  const authSession = getAuthSession()
+  if (authSession) {
+    profile.value.name = authSession.displayName || authSession.username
+    profile.value.account = authSession.username
+    profile.value.email = authSession.email || ''
+  } else {
+    refreshDraftGreeting()
   }
+})
 
+onBeforeUnmount(() => {
   if (countdownTicker !== null) {
     window.clearInterval(countdownTicker)
   }
@@ -422,73 +552,164 @@ function stopCountdownTickerIfIdle() {
   }
 }
 
+function openSidebar() {
+  sidebarOpen.value = true
+}
+
 function formatNow() {
-  const now = new Date()
-  return now.toLocaleTimeString('zh-CN', {
+  return new Date().toLocaleTimeString('zh-CN', {
     hour: '2-digit',
     minute: '2-digit',
   })
-}
-
-function openSidebar() {
-  sidebarOpen.value = true
 }
 
 function closeSidebar() {
   sidebarOpen.value = false
 }
 
-function openProfilePanel() {
+async function refreshProfilePanelData() {
+  const token = getAuthToken()
+  if (!token) {
+    return
+  }
+
+  const [nextProfile, nextTagCatalog] = await Promise.all([
+    fetchProfile(token),
+    fetchTagCatalog(token),
+  ])
+  profile.value = nextProfile
+  tagCatalog.value = nextTagCatalog
+  updateAuthSession({
+    displayName: nextProfile.name,
+    email: nextProfile.email || null,
+    hasCompletedWorkspaceOnboarding: nextProfile.hasCompletedWorkspaceOnboarding,
+    profileCompletedAt: nextProfile.profileCompletedAt ?? null,
+  })
+}
+
+async function openProfilePanel() {
   profilePanelOpen.value = true
   closeSidebar()
+  try {
+    await refreshProfilePanelData()
+  } catch {
+    // keep current local state if refresh fails
+  }
 }
 
 function closeProfilePanel() {
   profilePanelOpen.value = false
 }
 
-function completeWorkspaceOnboarding(payload: {
+function sanitizeTagSelections(selections: TagCatalog): TagCatalog {
+  return {
+    flavor: selections.flavor.filter((tag) => tagCatalog.value.flavor.includes(tag)),
+    method: selections.method.filter((tag) => tagCatalog.value.method.includes(tag)),
+    scene: selections.scene.filter((tag) => tagCatalog.value.scene.includes(tag)),
+    health: selections.health.filter((tag) => tagCatalog.value.health.includes(tag)),
+    time: selections.time.filter((tag) => tagCatalog.value.time.includes(tag)),
+    tool: selections.tool.filter((tag) => tagCatalog.value.tool.includes(tag)),
+  }
+}
+
+async function completeWorkspaceOnboarding(payload: {
   name: string
   cookingPreferenceText: string
   tagSelections: UserProfileSummary['tagSelections']
   allowAutoUpdate: boolean
   autoStartStepTimer: boolean
 }) {
-  profile.value.name = payload.name
-  profile.value.cookingPreferenceText = payload.cookingPreferenceText
-  profile.value.tagSelections = payload.tagSelections
-  profile.value.allowAutoUpdate = payload.allowAutoUpdate
-  profile.value.autoStartStepTimer = payload.autoStartStepTimer
+  const token = getAuthToken()
+  if (!token) {
+    return
+  }
+
+  const normalizedTagSelections = sanitizeTagSelections(payload.tagSelections)
+  const updated = await updateProfile(token, {
+    display_name: payload.name,
+    cooking_preference_text: payload.cookingPreferenceText,
+    tag_selections: normalizedTagSelections,
+    allow_auto_update: payload.allowAutoUpdate,
+    auto_start_step_timer: payload.autoStartStepTimer,
+    complete_workspace_onboarding: true,
+  })
+  profile.value = updated
   workspaceOnboardingOpen.value = false
   updateAuthSession({
+    displayName: updated.name,
+    email: updated.email || null,
     hasCompletedWorkspaceOnboarding: true,
-    profileCompletedAt: new Date().toISOString(),
+    profileCompletedAt: updated.profileCompletedAt ?? null,
   })
   startNewConversation()
 }
 
-function logout() {
+async function saveProfileSettings(payload: {
+  allowAutoUpdate: boolean
+  autoStartStepTimer: boolean
+  cookingPreferenceText: string
+  tagSelections: TagCatalog
+  displayName: string
+  email: string
+}) {
+  const token = getAuthToken()
+  if (!token) {
+    return
+  }
+  const normalizedTagSelections = sanitizeTagSelections(payload.tagSelections)
+  const updated = await updateProfile(token, {
+    allow_auto_update: payload.allowAutoUpdate,
+    auto_start_step_timer: payload.autoStartStepTimer,
+    cooking_preference_text: payload.cookingPreferenceText,
+    tag_selections: normalizedTagSelections,
+    display_name: payload.displayName,
+    email: payload.email || null,
+  })
+  profile.value = updated
+  updateAuthSession({
+    displayName: updated.name,
+    email: updated.email || null,
+    hasCompletedWorkspaceOnboarding: updated.hasCompletedWorkspaceOnboarding,
+    profileCompletedAt: updated.profileCompletedAt ?? null,
+  })
+}
+
+async function logout() {
+  const token = getAuthToken()
+  try {
+    if (token) {
+      await requestLogout(token)
+    }
+  } catch {
+    // ignore logout cleanup failure
+  }
   clearAuthSession()
   closeProfilePanel()
   workspaceOnboardingOpen.value = false
   activeConversationId.value = ''
+  conversations.value = []
+  recipes.value = []
+  loadedConversationIds.value = {}
+  loadedRecipeIds.value = {}
+  workspaceInitialized.value = false
   conversationTimers.value = {}
   pendingTimerReplacement.value = null
   timerNotice.value = null
   typingConversationId.value = null
+  streamingStatusText.value = ''
   stopCountdownTickerIfIdle()
   void router.push({ name: 'auth-login' })
 }
 
 function selectConversation(conversationId: string) {
   activeConversationId.value = conversationId
-  router.push({ name: 'chat', params: { conversationId } })
+  void router.push({ name: 'chat', params: { conversationId } })
   closeSidebar()
 }
 
 function selectShortcut(shortcutId: string) {
   if (shortcutId === 'recipes') {
-    router.push({ name: 'recipes' })
+    void router.push({ name: 'recipes' })
   }
 
   closeSidebar()
@@ -496,29 +717,8 @@ function selectShortcut(shortcutId: string) {
 
 function startNewConversation() {
   activeConversationId.value = ''
-  router.push({ name: 'chat', params: { conversationId: draftConversationId } })
+  void router.push({ name: 'chat', params: { conversationId: draftConversationId } })
   closeSidebar()
-}
-
-function createDraftConversation(prompt: string) {
-  const conversationId = `conversation-new-${newConversationIndex}`
-  const trimmedPrompt = prompt.trim()
-  const promptPreview = trimmedPrompt.length > 18 ? `${trimmedPrompt.slice(0, 18)}...` : trimmedPrompt
-
-  const conversation: ConversationRecord = {
-    id: conversationId,
-    title: promptPreview || `新的做饭任务 ${newConversationIndex}`,
-    stage: 'idea',
-    suggestions: draftSuggestions,
-    messages: [],
-  }
-
-  newConversationIndex += 1
-  conversations.value.unshift(conversation)
-  activeConversationId.value = conversation.id
-  router.replace({ name: 'chat', params: { conversationId: conversation.id } })
-
-  return conversation
 }
 
 function normalizeConversationCards(conversationList: ConversationRecord[]) {
@@ -550,292 +750,157 @@ function normalizeConversationCards(conversationList: ConversationRecord[]) {
   return conversationList
 }
 
-function createAssistantMessage(
-  content: string,
-  cards: MessageCard[],
-  createdAt: string,
-): ChatMessage {
+async function ensureConversationForSend() {
+  if (activeConversation.value) {
+    return activeConversation.value
+  }
+  const token = getAuthToken()
+  if (!token) {
+    return null
+  }
+  const created = await createConversation(token, { source: 'manual' })
+  upsertConversation(created, true)
+  loadedConversationIds.value[created.id] = true
+  activeConversationId.value = created.id
+  await router.replace({ name: 'chat', params: { conversationId: created.id } })
+  return created
+}
+
+function createStreamingAssistantMessage(): ChatMessage {
   return {
-    id: `assistant-${Date.now()}`,
+    id: `assistant-stream-${Date.now()}`,
     role: 'assistant',
-    content,
-    createdAt,
-    cards,
-  }
-}
-
-function formatStepDuration(seconds?: number | null) {
-  if (!seconds) {
-    return '跟着感觉推进'
-  }
-
-  if (seconds < 60) {
-    return `${seconds} 秒`
-  }
-
-  return `${Math.round(seconds / 60)} 分钟`
-}
-
-function findRecipeByPrompt(prompt: string, currentRecipeName?: string) {
-  const recipeIdMatch = prompt.match(/recipe:(\d+)/i)
-  if (recipeIdMatch) {
-    const recipeId = Number(recipeIdMatch[1])
-    return mockRecipes.find((recipe) => recipe.id === recipeId) ?? null
-  }
-
-  if (currentRecipeName) {
-    const currentRecipe = mockRecipes.find((recipe) => recipe.name === currentRecipeName)
-    if (currentRecipe) {
-      return currentRecipe
-    }
-  }
-
-  return mockRecipes.find((recipe) => prompt.includes(recipe.name)) ?? null
-}
-
-function buildRecommendationCard(): MessageCard {
-  return {
-    type: 'recipe-recommendations',
-    title: '今晚更适合你的三个方向',
-    summary: '',
-    recipes: mockRecipes.slice(0, 3).map((recipe) => ({
-      recipeId: recipe.id,
-      name: recipe.name,
-      description: recipe.description,
-      tags: recipe.tags.slice(0, 4),
-      difficulty: recipe.difficulty,
-      estimatedMinutes: recipe.estimatedMinutes,
-      servings: recipe.servings,
-      detailAction: {
-        id: `detail-${recipe.id}`,
-        label: '查看详情',
-        message: `查看菜谱详情 recipe:${recipe.id} ${recipe.name}`,
-        tone: 'ghost',
-      },
-      tryAction: {
-        id: `try-${recipe.id}`,
-        label: '想尝试',
-        message: `我想尝试 recipe:${recipe.id} ${recipe.name}`,
-        tone: 'primary',
-      },
-    })),
-  }
-}
-
-function buildRecipeDetailCard(recipe: RecipeRecord): MessageCard {
-  return {
-    type: 'recipe-detail',
-    title: `${recipe.name} 的详细做法`,
-    summary: '',
-    recipe,
-    actions: [
-      {
-        id: `detail-try-${recipe.id}`,
-        label: '想尝试',
-        message: `我想尝试 recipe:${recipe.id} ${recipe.name}`,
-        tone: 'primary',
-      },
-    ],
-  }
-}
-
-function buildPantryCard(recipe: RecipeRecord): MessageCard {
-  return {
-    type: 'pantry-status',
-    title: `${recipe.name} 备料检查`,
-    summary: '',
-    checklist: recipe.ingredients.slice(0, 6).map((ingredient, index) => ({
-      id: String(ingredient.id ?? `${recipe.id}-${index + 1}`),
-      ingredient: ingredient.ingredientName,
-      amount: ingredient.amountText,
-      status: index < 2 ? 'ready' : 'pending',
-      note:
-        ingredient.purpose ||
-        (ingredient.isOptional ? '可选项，没有也能先开始。' : '建议先确认这一项是否备齐。'),
-      isOptional: ingredient.isOptional,
-    })),
-    actions: [
-      {
-        id: `pantry-ready-${recipe.id}`,
-        label: '这些都备齐了',
-        message: `开始烹饪 recipe:${recipe.id} ${recipe.name}`,
-        tone: 'primary',
-      },
-    ],
-  }
-}
-
-function buildCookingGuideCard(recipe: RecipeRecord): MessageCard {
-  return {
-    type: 'cooking-guide',
-    title: `${recipe.name} 烹饪步骤`,
-    summary: '',
-    currentStep: Math.min(2, recipe.steps.length),
-    totalSteps: recipe.steps.length,
-    steps: recipe.steps.map((step, index) => ({
-      id: String(step.id ?? `${recipe.id}-step-${step.stepNo}`),
-      title: step.title || `步骤 ${step.stepNo}`,
-      detail: step.instruction,
-      duration: formatStepDuration(step.timerSeconds),
-      timerSeconds: step.timerSeconds,
-      notes: step.notes,
-      status: index + 1 < 2 ? 'done' : index + 1 === 2 ? 'current' : 'upcoming',
-    })),
-  }
-}
-
-function buildAssistantResponse(
-  prompt: string,
-  conversation: ConversationRecord,
-): {
-  content: string
-  cards: MessageCard[]
-  nextStage: ConversationRecord['stage']
-  nextTitle: string
-  suggestions: string[]
-  currentRecipe?: string
-} {
-  const normalizedPrompt = prompt.toLowerCase()
-  const referencedRecipe = findRecipeByPrompt(prompt, conversation.currentRecipe)
-  const includesRecommendationIntent =
-    /推荐|吃什么|晚饭|菜谱|鸡翅|鸡腿|想吃/.test(prompt) || conversation.stage === 'idea'
-  const includesPantryIntent =
-    /食材|冰箱|备料|缺什么|有啥|买菜/.test(prompt) || conversation.stage === 'planning'
-  const includesCookingIntent =
-    /开始做|步骤|下锅|烹饪|开火|怎么做/.test(prompt) || conversation.stage === 'shopping'
-
-  if (/查看菜谱详情|看看详情|详情/.test(prompt) && referencedRecipe) {
-    return {
-      content: `这是 ${referencedRecipe.name} 的详细做法。`,
-      cards: [buildRecipeDetailCard(referencedRecipe)],
-      nextStage: 'planning',
-      nextTitle: `正在查看 ${referencedRecipe.name} 的菜谱详情`,
-      suggestions: ['我想试试这道', '先看备料', '换一道类似的'],
-      currentRecipe: referencedRecipe.name,
-    }
-  }
-
-  if ((/想尝试|查看备料|差几样|材料/.test(prompt) || includesPantryIntent) && referencedRecipe) {
-    return {
-      content: `先检查一下 ${referencedRecipe.name} 需要准备的材料。`,
-      cards: [buildPantryCard(referencedRecipe)],
-      nextStage: 'shopping',
-      nextTitle: `${referencedRecipe.name} 的备料检查已经展开`,
-      suggestions: ['这些都备齐了', '再看看菜谱详情', '换一道类似的'],
-      currentRecipe: referencedRecipe.name,
-    }
-  }
-
-  if ((/开始烹饪|继续做|下一步|开火/.test(prompt) || includesCookingIntent) && referencedRecipe) {
-    return {
-      content: `已经切到 ${referencedRecipe.name} 的烹饪步骤。`,
-      cards: [buildCookingGuideCard(referencedRecipe)],
-      nextStage: 'cooking',
-      nextTitle: `${referencedRecipe.name} 正在烹饪中`,
-      suggestions: ['下一步做什么', '这一步火候要多大', '需要计时多久'],
-      currentRecipe: referencedRecipe.name,
-    }
-  }
-
-  if (includesRecommendationIntent && !includesCookingIntent && !includesPantryIntent) {
-    return {
-      content: '给你整理了几道更适合现在做的菜。',
-      cards: [buildRecommendationCard()],
-      nextStage: 'planning',
-      nextTitle: '候选菜已经整理好了，等你拍板',
-      suggestions: ['就做第一个', '按清淡一点再改一版', '告诉我需要准备什么'],
-    }
-  }
-
-  if (includesPantryIntent && !includesCookingIntent && referencedRecipe) {
-    return {
-      content: '我把需要准备的材料重新整理好了。',
-      cards: [buildPantryCard(referencedRecipe)],
-      nextStage: 'shopping',
-      nextTitle: `${referencedRecipe.name} 的备料检查已经展开`,
-      suggestions: ['生成补买清单', '按现有食材简化一下', '我想直接开始做'],
-      currentRecipe: referencedRecipe.name,
-    }
-  }
-
-  if ((includesCookingIntent || normalizedPrompt.includes('start')) && referencedRecipe) {
-    return {
-      content: '已经切到烹饪步骤了。',
-      cards: [buildCookingGuideCard(referencedRecipe)],
-      nextStage: 'cooking',
-      nextTitle: `${referencedRecipe.name} 正在烹饪中`,
-      suggestions: ['下一步做什么', '帮我提醒焖 3 分钟', '这一步火候要多大'],
-      currentRecipe: referencedRecipe.name,
-    }
-  }
-
-  return {
-    content: '我先把你的意思记下来了，我们可以继续往下细化要做什么。',
+    content: '',
+    createdAt: formatNow(),
     cards: [],
-    nextStage: conversation.stage,
-    nextTitle: conversation.title,
-    suggestions: conversation.suggestions,
   }
 }
 
-function sendMessage(payload: string | { prompt: string; attachments: ChatAttachment[] }) {
-  const prompt = typeof payload === 'string' ? payload.trim() : payload.prompt.trim()
-  const attachments = typeof payload === 'string' ? [] : payload.attachments
+function describeAction(action?: CardActionEvent) {
+  if (!action) {
+    return ''
+  }
+  if (action.actionType === 'view_recipe') {
+    return '查看这道菜的详情'
+  }
+  if (action.actionType === 'try_recipe') {
+    return '我想尝试这道菜'
+  }
+  if (action.actionType === 'ingredients_ready') {
+    return '这些都备齐了'
+  }
+  return action.actionType
+}
+
+async function sendMessage(payload: string | { prompt?: string; attachments?: ChatAttachment[]; action?: CardActionEvent }) {
+  const prompt = typeof payload === 'string' ? payload.trim() : (payload.prompt || '').trim()
+  const attachments = typeof payload === 'string' ? [] : payload.attachments || []
+  const action = typeof payload === 'string' ? undefined : payload.action
   const hasAttachments = attachments.length > 0
 
-  if (!prompt && !hasAttachments) {
+  if (!prompt && !hasAttachments && !action) {
     return
   }
 
-  const previewText = prompt || '发送了一张图片'
-  const conversation =
-    activeConversation.value ?? (isDraftConversationRoute.value ? createDraftConversation(previewText) : null)
+  const token = getAuthToken()
+  if (!token) {
+    return
+  }
+
+  const conversation = await ensureConversationForSend()
   if (!conversation) {
     return
   }
 
-  conversation.messages.push({
-    id: `user-${Date.now()}`,
-    role: 'user',
-    content: prompt,
-    attachments: hasAttachments ? attachments : undefined,
-    createdAt: formatNow(),
-  })
-  conversation.title = previewText
-  typingConversationId.value = conversation.id
+  let targetConversation =
+    conversations.value.find((item) => item.id === conversation.id) ?? conversation
 
-  if (pendingResponseTimer.value !== null) {
-    window.clearTimeout(pendingResponseTimer.value)
+  if (targetConversation.id && targetConversation.id !== draftConversationId) {
+    try {
+      const synced = await syncConversationFromBackend(targetConversation.id)
+      if (synced) {
+        targetConversation = conversations.value.find((item) => item.id === synced.id) ?? synced
+      }
+    } catch {
+      // ignore sync failure and continue with current local state
+    }
   }
 
-  const responseConversationId = conversation.id
-  const responsePrompt = prompt || '我发来了一张图片，请帮我看看。'
-  const response = buildAssistantResponse(responsePrompt, conversation)
+  const userMessage: ChatMessage = {
+    id: `user-${Date.now()}`,
+    role: 'user',
+    content: prompt || describeAction(action),
+    attachments: hasAttachments ? attachments : undefined,
+    createdAt: formatNow(),
+  }
+  targetConversation.messages.push(userMessage)
 
-  pendingResponseTimer.value = window.setTimeout(() => {
-    const targetConversation = conversations.value.find(
-      (currentConversation) => currentConversation.id === responseConversationId,
+  const placeholder = createStreamingAssistantMessage()
+  targetConversation.messages.push(placeholder)
+  typingConversationId.value = targetConversation.id
+  streamingStatusText.value = '正在理解你的需求...'
+
+  try {
+    await streamConversationMessage(
+      token,
+      targetConversation.id,
+      {
+        content: prompt || undefined,
+        attachments: attachments.map((attachment) => ({
+          kind: 'image',
+          file_id: attachment.fileId,
+          file_url: attachment.fileUrl,
+          name: attachment.name,
+        })),
+        action: action ? toBackendActionPayload(action) : undefined,
+      },
+      ({ event, data }) => {
+        if (event === 'status') {
+          streamingStatusText.value = data.text || '正在处理...'
+          return
+        }
+
+        if (event === 'token') {
+          placeholder.content += data.text || ''
+          return
+        }
+
+        if (event === 'final') {
+          const index = targetConversation.messages.findIndex((message) => message.id === placeholder.id)
+          if (index >= 0) {
+            targetConversation.messages[index] = data.message
+          } else {
+            targetConversation.messages.push(data.message)
+          }
+          targetConversation.title = data.conversation.title
+          targetConversation.stage = data.conversation.stage
+          targetConversation.currentRecipe = data.conversation.currentRecipe
+          targetConversation.suggestions = data.conversation.suggestions
+          normalizeConversationCards([targetConversation])
+          upsertConversation(targetConversation, true)
+          loadedConversationIds.value[targetConversation.id] = true
+          return
+        }
+
+        if (event === 'error') {
+          placeholder.content = data.detail || '消息发送失败，请稍后重试。'
+        }
+      },
     )
-
-    if (!targetConversation) {
-      return
+    const synced = await syncConversationFromBackend(targetConversation.id)
+    if (synced) {
+      targetConversation = conversations.value.find((item) => item.id === synced.id) ?? synced
     }
+  } catch (error) {
+    placeholder.content = error instanceof Error ? error.message : '消息发送失败，请稍后重试。'
+  } finally {
+    typingConversationId.value = null
+    streamingStatusText.value = ''
+  }
+}
 
-    targetConversation.messages.push(
-      createAssistantMessage(response.content, response.cards, formatNow()),
-    )
-    normalizeConversationCards([targetConversation])
-    targetConversation.stage = response.nextStage
-    targetConversation.title = response.nextTitle
-    targetConversation.suggestions = response.suggestions
-    targetConversation.currentRecipe = response.currentRecipe ?? targetConversation.currentRecipe
-
-    if (typingConversationId.value === responseConversationId) {
-      typingConversationId.value = null
-    }
-
-    pendingResponseTimer.value = null
-  }, 650)
+function sendCardAction(action: CardActionEvent) {
+  void sendMessage({ action })
 }
 
 function requestTimer(payload: TimerRequest) {
@@ -939,36 +1004,27 @@ function cancelTimer() {
   stopCountdownTickerIfIdle()
 }
 
-function startConversationFromRecipe(recipe: RecipeRecord) {
-  const conversation: ConversationRecord = {
-    id: `conversation-new-${newConversationIndex}`,
-    title: `已选中 ${recipe.name}，开始确认备料`,
-    stage: 'shopping',
-    currentRecipe: recipe.name,
-    suggestions: ['这些都备齐了', '再看看菜谱详情', '按 1 人份调整一下'],
-    messages: [
-      {
-        id: `conversation-new-${newConversationIndex}-assistant-1`,
-        role: 'assistant',
-        content: `已经为你打开 ${recipe.name} 的专属对话，我们直接从备料开始，不再重复走推荐步骤。`,
-        createdAt: formatNow(),
-        cards: [buildPantryCard(recipe)],
-      },
-    ],
+async function startConversationFromRecipe(recipe: RecipeRecord) {
+  const token = getAuthToken()
+  if (!token) {
+    return
   }
-
-  newConversationIndex += 1
-  conversations.value.unshift(conversation)
-  activeConversationId.value = conversation.id
-  router.push({ name: 'chat', params: { conversationId: conversation.id } })
+  const created = await createConversation(token, {
+    source: 'recipe',
+    recipe_id: recipe.id,
+  })
+  upsertConversation(created, true)
+  loadedConversationIds.value[created.id] = true
+  activeConversationId.value = created.id
+  void router.push({ name: 'chat', params: { conversationId: created.id } })
 }
 
 function selectRecipe(recipeId: number) {
-  router.push({ name: 'recipe-detail', params: { recipeId } })
+  void router.push({ name: 'recipe-detail', params: { recipeId } })
 }
 
 function showRecipeLibrary() {
-  router.push({ name: 'recipes' })
+  void router.push({ name: 'recipes' })
 }
 </script>
 
@@ -995,8 +1051,10 @@ function showRecipeLibrary() {
         <template v-if="isRecipeRoute">
           <section class="recipe-workspace">
             <RecipeLibraryPanel
-              :recipes="mockRecipes"
+              :recipes="recipes"
+              :selected-recipe="selectedRecipe"
               :selected-recipe-id="activeRecipeId"
+              :recommendation-seed="JSON.stringify(profile.tagSelections)"
               @select-recipe="selectRecipe"
               @show-library="showRecipeLibrary"
               @start-conversation="startConversationFromRecipe"
@@ -1034,20 +1092,23 @@ function showRecipeLibrary() {
 
                 <template v-else>
                   <MessageBubble
-                    v-for="message in activeConversation?.messages ?? []"
+                    v-for="message in visibleConversation.messages"
                     :key="message.id"
                     :message="message"
                     :auto-start-step-timer="profile.autoStartStepTimer"
-                    @card-action="sendMessage"
+                    @card-action="sendCardAction"
                     @timer-request="requestTimer"
                   />
                 </template>
 
                 <div v-if="isTyping" class="typing-row">
-                  <div class="typing-bubble">
-                    <span></span>
-                    <span></span>
-                    <span></span>
+                  <div class="typing-bubble typing-bubble-with-text">
+                    <div class="typing-dots">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
+                    <p>{{ streamingStatusText || 'ChefMate 正在思考...' }}</p>
                   </div>
                 </div>
 
@@ -1062,6 +1123,20 @@ function showRecipeLibrary() {
             />
           </section>
         </template>
+
+        <template v-else-if="route.name === 'chat'">
+          <section class="chat-stage">
+            <section class="message-viewport hover-scroll">
+              <div class="message-stream">
+                <div class="blank-chat-state">
+                  <p class="blank-chat-eyebrow">ChefMate</p>
+                  <h3>正在加载这段对话...</h3>
+                  <p>如果还没显示出来，稍等一下，或者先切到别的会话再回来看看。</p>
+                </div>
+              </div>
+            </section>
+          </section>
+        </template>
       </main>
 
       <OverlayDialog :is-open="profilePanelOpen" @close="closeProfilePanel">
@@ -1071,6 +1146,7 @@ function showRecipeLibrary() {
           @logout="logout"
           @update-allow-auto-update="profile.allowAutoUpdate = $event"
           @update-auto-start-step-timer="profile.autoStartStepTimer = $event"
+          @save-profile="saveProfileSettings"
         />
       </OverlayDialog>
 
@@ -1237,6 +1313,17 @@ function showRecipeLibrary() {
   box-shadow: 0 18px 30px rgba(33, 47, 43, 0.08);
 }
 
+.typing-bubble-with-text {
+  align-items: flex-start;
+  gap: 0.8rem;
+}
+
+.typing-dots {
+  display: inline-flex;
+  gap: 0.35rem;
+  margin-top: 0.15rem;
+}
+
 .typing-bubble span {
   width: 0.45rem;
   height: 0.45rem;
@@ -1251,6 +1338,13 @@ function showRecipeLibrary() {
 
 .typing-bubble span:nth-child(3) {
   animation-delay: 0.3s;
+}
+
+.typing-bubble-with-text p {
+  margin: 0;
+  color: var(--color-text-soft);
+  font-size: 0.9rem;
+  line-height: 1.6;
 }
 
 :deep(.cooking-guide-card.is-focused) {

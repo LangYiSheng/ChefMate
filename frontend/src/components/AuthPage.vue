@@ -9,6 +9,7 @@ import {
   validatePassword,
   validateUsername,
 } from '../constants/auth'
+import { login, register } from '../lib/api'
 import { saveAuthSession } from '../state/auth'
 
 const props = defineProps<{
@@ -30,6 +31,8 @@ const registerForm = reactive({
 })
 
 const attemptedSubmit = ref(false)
+const submitting = ref(false)
+const submitError = ref('')
 
 const isLogin = computed(() => props.mode === 'login')
 const pageTitle = computed(() => (isLogin.value ? '欢迎回来' : '欢迎加入 ChefMate'))
@@ -151,26 +154,40 @@ const registerConfirmState = computed(() => {
 
 function switchMode(mode: 'login' | 'register') {
   attemptedSubmit.value = false
+  submitError.value = ''
   void router.push({ name: mode === 'login' ? 'auth-login' : 'auth-register' })
 }
 
-function submitLogin() {
+async function submitLogin() {
   attemptedSubmit.value = true
+  submitError.value = ''
   if (loginErrors.value.username || loginErrors.value.password) {
     return
   }
 
-  saveAuthSession({
-    username: loginForm.username.trim(),
-    loggedInAt: new Date().toISOString(),
-    hasCompletedWorkspaceOnboarding: false,
-    profileCompletedAt: null,
-  })
-  void router.push({ name: 'chat' })
+  submitting.value = true
+  try {
+    const response = await login(loginForm.username.trim(), loginForm.password)
+    saveAuthSession({
+      token: response.token,
+      username: response.user.account,
+      displayName: response.user.name,
+      email: response.user.email || null,
+      loggedInAt: new Date().toISOString(),
+      hasCompletedWorkspaceOnboarding: response.user.hasCompletedWorkspaceOnboarding,
+      profileCompletedAt: response.user.profileCompletedAt ?? null,
+    })
+    void router.push({ name: 'chat' })
+  } catch (error) {
+    submitError.value = error instanceof Error ? error.message : '登录失败，请稍后重试。'
+  } finally {
+    submitting.value = false
+  }
 }
 
-function submitRegister() {
+async function submitRegister() {
   attemptedSubmit.value = true
+  submitError.value = ''
   if (
     registerErrors.value.username ||
     registerErrors.value.email ||
@@ -180,14 +197,28 @@ function submitRegister() {
     return
   }
 
-  saveAuthSession({
-    username: registerForm.username.trim(),
-    email: registerForm.email.trim() || null,
-    loggedInAt: new Date().toISOString(),
-    hasCompletedWorkspaceOnboarding: false,
-    profileCompletedAt: null,
-  })
-  void router.push({ name: 'chat' })
+  submitting.value = true
+  try {
+    const response = await register(
+      registerForm.username.trim(),
+      registerForm.email.trim(),
+      registerForm.password,
+    )
+    saveAuthSession({
+      token: response.token,
+      username: response.user.account,
+      displayName: response.user.name,
+      email: response.user.email || null,
+      loggedInAt: new Date().toISOString(),
+      hasCompletedWorkspaceOnboarding: response.user.hasCompletedWorkspaceOnboarding,
+      profileCompletedAt: response.user.profileCompletedAt ?? null,
+    })
+    void router.push({ name: 'chat' })
+  } catch (error) {
+    submitError.value = error instanceof Error ? error.message : '注册失败，请稍后重试。'
+  } finally {
+    submitting.value = false
+  }
 }
 </script>
 
@@ -263,7 +294,11 @@ function submitRegister() {
                 <em v-if="loginErrors.password">{{ loginErrors.password }}</em>
               </label>
 
-              <button type="submit" class="submit-button">登录</button>
+              <p v-if="submitError" class="submit-error">{{ submitError }}</p>
+
+              <button type="submit" class="submit-button" :disabled="submitting">
+                {{ submitting ? '登录中...' : '登录' }}
+              </button>
             </form>
 
             <form v-else key="register" class="auth-form" @submit.prevent="submitRegister">
@@ -305,7 +340,11 @@ function submitRegister() {
                 <em v-if="registerErrors.confirmPassword">{{ registerErrors.confirmPassword }}</em>
               </label>
 
-              <button type="submit" class="submit-button">注册</button>
+              <p v-if="submitError" class="submit-error">{{ submitError }}</p>
+
+              <button type="submit" class="submit-button" :disabled="submitting">
+                {{ submitting ? '注册中...' : '注册' }}
+              </button>
             </form>
           </Transition>
         </div>
@@ -529,6 +568,17 @@ function submitRegister() {
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 16px 34px rgba(27, 50, 44, 0.16);
+}
+
+.submit-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.submit-error {
+  margin: 0;
+  color: #b34e2b;
+  font-size: 0.9rem;
 }
 
 .auth-copy-fade-enter-active,

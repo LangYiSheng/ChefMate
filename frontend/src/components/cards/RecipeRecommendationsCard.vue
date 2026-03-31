@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import type { RecipeRecommendationsCard as RecipeRecommendationsCardType } from '../../types/chat'
+import type {
+  CardActionEvent,
+  RecipeRecommendationsCard as RecipeRecommendationsCardType,
+} from '../../types/chat'
 
 defineProps<{
   card: RecipeRecommendationsCardType
 }>()
 
 const emit = defineEmits<{
-  action: [message: string]
+  action: [action: CardActionEvent]
 }>()
 </script>
 
@@ -37,11 +40,14 @@ const emit = defineEmits<{
         </div>
 
         <div class="action-row">
-          <button type="button" class="ghost-button" @click="emit('action', recipe.detailAction.message)">
-            {{ recipe.detailAction.label }}
-          </button>
-          <button type="button" class="primary-button" @click="emit('action', recipe.tryAction.message)">
-            {{ recipe.tryAction.label }}
+          <button
+            v-for="action in recipe.actions"
+            :key="action.id"
+            type="button"
+            :class="action.actionType === 'try_recipe' ? 'primary-button' : 'ghost-button'"
+            @click="emit('action', { actionType: action.actionType, payload: action.payload })"
+          >
+            {{ action.label }}
           </button>
         </div>
       </article>

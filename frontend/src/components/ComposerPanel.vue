@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
+import { uploadImage } from '../lib/api'
+import { getAuthToken } from '../state/auth'
 import type { ChatAttachment } from '../types/chat'
 
 const props = defineProps<{
@@ -13,12 +15,17 @@ const emit = defineEmits<{
 }>()
 
 const draft = ref('')
-const attachment = ref<(ChatAttachment & { status: 'uploading' | 'ready' }) | null>(null)
+const attachment = ref<(ChatAttachment & { status: 'uploading' | 'ready' | 'error' }) | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 
 function submit() {
   const content = draft.value.trim()
-  if (props.disabled || (!content && !attachment.value) || attachment.value?.status === 'uploading') {
+  if (
+    props.disabled ||
+    (!content && !attachment.value) ||
+    attachment.value?.status === 'uploading' ||
+    attachment.value?.status === 'error'
+  ) {
     return
   }
 
@@ -51,6 +58,8 @@ function normalizeAttachment(item: ChatAttachment & { status: 'uploading' | 'rea
     kind: item.kind,
     name: item.name,
     previewUrl: item.previewUrl,
+    fileId: item.fileId,
+    fileUrl: item.fileUrl,
   }
 }
 
@@ -85,6 +94,12 @@ async function onFileChange(event: Event) {
     return
   }
 
+  const token = getAuthToken()
+  if (!token) {
+    clearAttachment()
+    return
+  }
+
   attachment.value = {
     id: `attachment-${Date.now()}`,
     kind: 'image',
@@ -95,17 +110,29 @@ async function onFileChange(event: Event) {
 
   try {
     const previewUrl = await readFileAsDataUrl(file)
+    attachment.value = {
+      id: `attachment-${Date.now()}`,
+      kind: 'image',
+      name: file.name,
+      previewUrl,
+      status: 'uploading',
+    }
+    const uploaded = await uploadImage(token, file)
     window.setTimeout(() => {
       attachment.value = {
-        id: `attachment-${Date.now()}`,
-        kind: 'image',
-        name: file.name,
+        ...uploaded,
         previewUrl,
         status: 'ready',
       }
-    }, 260)
+    }, 220)
   } catch {
-    clearAttachment()
+    attachment.value = {
+      id: `attachment-${Date.now()}`,
+      kind: 'image',
+      name: file.name,
+      previewUrl: '',
+      status: 'error',
+    }
   }
 }
 </script>
@@ -147,7 +174,13 @@ async function onFileChange(event: Event) {
         <div class="attachment-meta">
           <strong>{{ attachment.name }}</strong>
           <span class="attachment-status" :class="attachment.status">
-            {{ attachment.status === 'ready' ? '图片已就绪' : '图片上传中…' }}
+            {{
+              attachment.status === 'ready'
+                ? '图片已就绪'
+                : attachment.status === 'error'
+                  ? '上传失败，请重试'
+                  : '图片上传中…'
+            }}
           </span>
         </div>
 
@@ -169,7 +202,7 @@ async function onFileChange(event: Event) {
           <button
             class="send-button"
             type="button"
-            :disabled="disabled || attachment?.status === 'uploading'"
+            :disabled="disabled || attachment?.status === 'uploading' || attachment?.status === 'error'"
             @click="submit"
           >
             发送

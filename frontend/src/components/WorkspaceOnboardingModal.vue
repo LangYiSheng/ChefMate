@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import type { TagCatalog, TagCategoryKey, UserProfileSummary } from '../types/chat'
 
@@ -39,17 +39,17 @@ const categoryMeta: Array<{ key: TagCategoryKey; label: string }> = [
 ]
 
 const currentStep = ref(0)
-const displayName = ref(props.userProfile.name)
-const cookingPreferenceText = ref(props.userProfile.cookingPreferenceText)
-const allowAutoUpdate = ref(props.userProfile.allowAutoUpdate)
-const autoStartStepTimer = ref(props.userProfile.autoStartStepTimer)
+const displayName = ref('')
+const cookingPreferenceText = ref('')
+const allowAutoUpdate = ref(true)
+const autoStartStepTimer = ref(false)
 const selectedTags = ref<TagCatalog>({
-  flavor: [...props.userProfile.tagSelections.flavor],
-  method: [...props.userProfile.tagSelections.method],
-  scene: [...props.userProfile.tagSelections.scene],
-  health: [...props.userProfile.tagSelections.health],
-  time: [...props.userProfile.tagSelections.time],
-  tool: [...props.userProfile.tagSelections.tool],
+  flavor: [],
+  method: [],
+  scene: [],
+  health: [],
+  time: [],
+  tool: [],
 })
 
 const selectedTagCount = computed(() => Object.values(selectedTags.value).flat().length)
@@ -60,6 +60,17 @@ const canContinue = computed(() => {
 
   return true
 })
+
+function normalizeSelections(source: UserProfileSummary['tagSelections']): TagCatalog {
+  return {
+    flavor: source.flavor.filter((tag) => props.tagCatalog.flavor.includes(tag)),
+    method: source.method.filter((tag) => props.tagCatalog.method.includes(tag)),
+    scene: source.scene.filter((tag) => props.tagCatalog.scene.includes(tag)),
+    health: source.health.filter((tag) => props.tagCatalog.health.includes(tag)),
+    time: source.time.filter((tag) => props.tagCatalog.time.includes(tag)),
+    tool: source.tool.filter((tag) => props.tagCatalog.tool.includes(tag)),
+  }
+}
 
 function toggleTag(category: TagCategoryKey, tag: string) {
   const currentTags = selectedTags.value[category]
@@ -104,6 +115,18 @@ function completeOnboarding() {
     autoStartStepTimer: autoStartStepTimer.value,
   })
 }
+
+watch(
+  () => [props.userProfile, props.tagCatalog] as const,
+  ([profile]) => {
+    displayName.value = profile.name
+    cookingPreferenceText.value = profile.cookingPreferenceText
+    allowAutoUpdate.value = profile.allowAutoUpdate
+    autoStartStepTimer.value = profile.autoStartStepTimer
+    selectedTags.value = normalizeSelections(profile.tagSelections)
+  },
+  { immediate: true, deep: true },
+)
 </script>
 
 <template>

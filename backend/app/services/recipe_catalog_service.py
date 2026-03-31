@@ -32,6 +32,15 @@ class RecipeCatalogEntry(BaseModel):
 
 class RecipeCatalogService:
     DEFAULT_RECIPE_INCLUDE = ("recipe", "tags", "ingredients", "steps")
+    TAG_CATEGORY_LABELS = {
+        "flavor": "口味",
+        "method": "做法",
+        "scene": "场景",
+        "health": "健康",
+        "time": "时间",
+        "tool": "工具",
+        "difficulty": "难度",
+    }
     TAG_ALIASES = {
         "health": {
             "减脂": "减脂友好",
@@ -68,6 +77,64 @@ class RecipeCatalogService:
             )
             for recipe in recipes
         ]
+
+    def get_tag_taxonomy(self) -> dict[str, list[str]]:
+        return recipe_repository.get_tag_taxonomy()
+
+    def validate_tag_filters(
+        self,
+        filters: dict[str, list[str]],
+        *,
+        categories: list[str] | tuple[str, ...] | set[str] | None = None,
+        allow_alias: bool = False,
+    ) -> dict[str, list[str]]:
+        taxonomy = self.get_tag_taxonomy()
+        target_categories = list(categories or filters.keys())
+        normalized: dict[str, list[str]] = {}
+        invalid: dict[str, list[str]] = {}
+
+        for category in target_categories:
+            values = filters.get(category, [])
+            if not values:
+                continue
+            allowed_values = taxonomy.get(category, [])
+            if not allowed_values:
+                invalid[category] = [value.strip() for value in values if isinstance(value, str) and value.strip()]
+                continue
+
+            alias_map = self.TAG_ALIASES.get(category, {}) if allow_alias else {}
+            seen: set[str] = set()
+            resolved_values: list[str] = []
+            invalid_values: list[str] = []
+
+            for raw_value in values:
+                if not isinstance(raw_value, str):
+                    continue
+                value = raw_value.strip()
+                if not value:
+                    continue
+                candidate = alias_map.get(value, value)
+                if candidate in allowed_values:
+                    if candidate not in seen:
+                        resolved_values.append(candidate)
+                        seen.add(candidate)
+                    continue
+                invalid_values.append(value)
+
+            if resolved_values:
+                normalized[category] = resolved_values
+            if invalid_values:
+                invalid[category] = invalid_values
+
+        if invalid:
+            raise ValueError(
+                self._build_invalid_tag_message(
+                    invalid=invalid,
+                    taxonomy=taxonomy,
+                    categories=target_categories,
+                )
+            )
+        return normalized
 
     def get_recipe_by_id(self, recipe_id: int, include: list[str] | None = None) -> RecipeLookupResponse | None:
         resolved_include = self._resolve_recipe_include(include)
@@ -493,6 +560,26 @@ class RecipeCatalogService:
             resolved.update(alias_map.get(key, set()))
 
         return resolved or set(self.DEFAULT_RECIPE_INCLUDE)
+
+    def _build_invalid_tag_message(
+        self,
+        *,
+        invalid: dict[str, list[str]],
+        taxonomy: dict[str, list[str]],
+        categories: list[str],
+    ) -> str:
+        ordered_categories = [category for category in self.TAG_CATEGORY_LABELS if category in categories]
+        invalid_text = "；".join(
+            f"{self.TAG_CATEGORY_LABELS.get(category, category)}：{'、'.join(values)}"
+            for category, values in invalid.items()
+            if values
+        )
+        available_text = "；".join(
+            f"{self.TAG_CATEGORY_LABELS.get(category, category)}可选：{'、'.join(taxonomy.get(category, []))}"
+            for category in ordered_categories
+            if taxonomy.get(category)
+        )
+        return f"输入了无效的标签。错误项：{invalid_text}。可选的标签有：{available_text}"
 
 
 recipe_catalog_service = RecipeCatalogService()

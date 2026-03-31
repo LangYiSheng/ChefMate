@@ -1,7 +1,9 @@
 const AUTH_STORAGE_KEY = 'chefmate-auth-session'
 
 export interface AuthSession {
+  token: string
   username: string
+  displayName?: string
   email?: string | null
   loggedInAt: string
   hasCompletedWorkspaceOnboarding?: boolean
@@ -28,6 +30,10 @@ export function getAuthSession(): AuthSession | null {
     window.localStorage.removeItem(AUTH_STORAGE_KEY)
     return null
   }
+}
+
+export function getAuthToken() {
+  return getAuthSession()?.token ?? null
 }
 
 export function isAuthenticated() {

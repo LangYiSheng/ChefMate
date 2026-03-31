@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import MessageCardRenderer from './cards/MessageCardRenderer.vue'
-import type { ChatMessage, TimerRequest } from '../types/chat'
+import type { CardActionEvent, ChatMessage, TimerRequest } from '../types/chat'
 
 defineProps<{
   message: ChatMessage
@@ -8,7 +8,7 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  cardAction: [message: string]
+  cardAction: [action: CardActionEvent]
   timerRequest: [payload: TimerRequest]
 }>()
 
@@ -22,6 +22,10 @@ function avatarText(role: ChatMessage['role']) {
   }
 
   return '我'
+}
+
+function cardKey(messageId: string, card: NonNullable<ChatMessage['cards']>[number], index: number) {
+  return `${messageId}-${card.type}-${index}`
 }
 </script>
 
@@ -47,8 +51,8 @@ function avatarText(role: ChatMessage['role']) {
 
       <div v-if="message.cards?.length" class="card-stack">
         <MessageCardRenderer
-          v-for="card in message.cards"
-          :key="card.title"
+          v-for="(card, index) in message.cards"
+          :key="cardKey(message.id, card, index)"
           :card="card"
           :auto-start-step-timer="autoStartStepTimer"
           @action="emit('cardAction', $event)"

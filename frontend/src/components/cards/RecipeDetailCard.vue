@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import type { RecipeDetailCard as RecipeDetailCardType } from '../../types/chat'
+import type { CardActionEvent, RecipeDetailCard as RecipeDetailCardType } from '../../types/chat'
 
 defineProps<{
   card: RecipeDetailCardType
 }>()
 
 const emit = defineEmits<{
-  action: [message: string]
+  action: [action: CardActionEvent]
 }>()
 </script>
 
@@ -70,7 +70,7 @@ const emit = defineEmits<{
         :key="action.id"
         type="button"
         class="primary-button"
-        @click="emit('action', action.message)"
+        @click="emit('action', { actionType: action.actionType, payload: action.payload })"
       >
         {{ action.label }}
       </button>

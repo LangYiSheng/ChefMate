@@ -2,6 +2,11 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
+import mimetypes
+from pathlib import Path
+from urllib.parse import urlparse
+from urllib.request import urlopen
 from typing import Any
 
 from openai import OpenAIError
@@ -9,6 +14,8 @@ from openai import OpenAIError
 from app.config import settings
 from app.infra.llm.clients import build_openai_client, resolve_vision_llm_config
 from app.schemas.vision import IngredientDetectionItem, IngredientDetectionResponse
+
+logger = logging.getLogger(__name__)
 
 
 class VisionConfigurationError(RuntimeError):
@@ -45,6 +52,21 @@ class VisionService:
             raise NotImplementedError("本地自训练图像识别模型尚未接入，当前请先将 CHEFMATE_VISION_BACKEND 设置为 llm。")
         raise VisionConfigurationError(f"不支持的图像识别后端：{settings.vision_backend}")
 
+    def detect_ingredients_from_image_url(
+        self,
+        *,
+        image_url: str,
+        user_hint: str | None = None,
+    ) -> IngredientDetectionResponse:
+        logger.info("[vision] load image_url=%r user_hint=%r", image_url, user_hint)
+        payload, mime_type, filename = self._load_image_from_url(image_url)
+        return self.detect_ingredients_from_image(
+            image_bytes=payload,
+            mime_type=mime_type,
+            filename=filename,
+            user_hint=user_hint,
+        )
+
     def _detect_by_llm(
         self,
         *,
@@ -61,6 +83,13 @@ class VisionService:
         prompt = self._build_user_prompt(filename=filename, user_hint=user_hint)
         image_base64 = base64.b64encode(image_bytes).decode("utf-8")
         image_url = f"data:{mime_type};base64,{image_base64}"
+        logger.info(
+            "[vision] start backend=llm model=%s mime=%s filename=%r bytes=%s",
+            config.model,
+            mime_type,
+            filename,
+            len(image_bytes),
+        )
 
         try:
             response = client.chat.completions.create(
@@ -78,11 +107,13 @@ class VisionService:
                 ],
             )
         except OpenAIError as exc:
+            logger.exception("[vision] llm call failed model=%s filename=%r", config.model, filename)
             raise VisionConfigurationError(f"调用图像识别模型失败：{exc}") from exc
 
         raw_text = self._extract_response_text(response)
         parsed = self._parse_json_text(raw_text)
         ingredients = self._normalize_ingredients(parsed.get("ingredients", []))
+        logger.info("[vision] detected ingredients=%s", ingredients)
         return IngredientDetectionResponse(
             backend="llm",
             model=config.model,
@@ -166,6 +197,27 @@ class VisionService:
                 normalized.append(name)
                 seen.add(name)
         return normalized
+
+    def _load_image_from_url(self, image_url: str) -> tuple[bytes, str, str | None]:
+        parsed = urlparse(image_url)
+        if image_url.startswith(settings.asset_url_prefix):
+            storage_key = image_url.removeprefix(settings.asset_url_prefix).lstrip("/")
+            path = settings.upload_path / storage_key
+            if not path.exists():
+                raise VisionConfigurationError("找不到对应的上传图片文件。")
+            return path.read_bytes(), self._guess_mime_type(path), path.name
+        if parsed.scheme in {"http", "https"}:
+            with urlopen(image_url) as response:  # noqa: S310
+                payload = response.read()
+                mime_type = response.headers.get_content_type() or self._guess_mime_type(Path(parsed.path))
+                return payload, mime_type, Path(parsed.path).name or None
+        path = Path(image_url)
+        if path.exists():
+            return path.read_bytes(), self._guess_mime_type(path), path.name
+        raise VisionConfigurationError("无法读取图像链接，请确认图片已先上传。")
+
+    def _guess_mime_type(self, path: Path) -> str:
+        return mimetypes.guess_type(path.name)[0] or "image/jpeg"
 
 
 vision_service = VisionService()
