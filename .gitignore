@@ -22,3 +22,5 @@ ml/vision/weights/
 
 # Prompts
 prompt
+
+backend/storage/
