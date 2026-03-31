@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from collections import defaultdict
 import logging
 from typing import Any, AsyncIterator
@@ -31,12 +32,16 @@ from app.services.profile_service import profile_service
 from app.services.recipe_catalog_service import recipe_catalog_service
 from app.services.task_service import task_service
 from app.infra.llm.clients import build_langchain_chat_model
+from app.utils.recipe_snapshot import apply_client_card_state_overlay
 from app.utils.time import utc_now
 
 logger = logging.getLogger(__name__)
 
 
 class ConversationService:
+    def __init__(self) -> None:
+        self._conversation_locks: dict[str, asyncio.Lock] = {}
+
     def list_conversations(self, user: UserProfileSnapshot) -> list[ConversationSummary]:
         return [self._row_to_summary(item) for item in conversation_repository.list_conversations(user_id=user.id)]
 
@@ -127,129 +132,135 @@ class ConversationService:
         conversation_id: str,
         payload: SendMessageRequest,
     ) -> AsyncIterator[dict[str, Any]]:
-        try:
-            conversation = conversation_repository.get_conversation(user_id=user.id, conversation_id=conversation_id)
-            if conversation is None:
-                raise ValueError("对话不存在。")
+        conversation_lock = self._conversation_locks.setdefault(conversation_id, asyncio.Lock())
+        if conversation_lock.locked():
+            raise ValueError("当前这段对话还在处理中，请等待本轮回复完成后再操作。")
 
-            asset_ids, current_attachments = self._resolve_input_attachments(user, payload)
-            logger.info(
-                "[agent-turn] incoming conversation=%s user_id=%s stage=%s task_id=%s content=%r attachments=%s action=%s",
-                conversation_id,
-                user.id,
-                conversation.get("stage"),
-                conversation.get("current_task_id"),
-                self._truncate_text(payload.content or ""),
-                [attachment.file_url or attachment.preview_url for attachment in current_attachments],
-                payload.action.model_dump(mode="json") if payload.action else None,
-            )
+        async with conversation_lock:
+            try:
+                conversation = conversation_repository.get_conversation(user_id=user.id, conversation_id=conversation_id)
+                if conversation is None:
+                    raise ValueError("对话不存在。")
 
-            user_message_id = conversation_repository.create_message(
-                conversation_id=conversation_id,
-                task_id=conversation.get("current_task_id"),
-                role=MessageRole.USER,
-                content=payload.content or "",
-            )
-            conversation_repository.attach_assets_to_message(user_message_id, asset_ids)
-            conversation_repository.update_conversation(conversation_id, {"updated_at": utc_now()})
+                asset_ids, current_attachments = self._resolve_input_attachments(user, payload)
+                logger.info(
+                    "[agent-turn] incoming conversation=%s user_id=%s stage=%s task_id=%s content=%r attachments=%s action=%s client_card_state=%s",
+                    conversation_id,
+                    user.id,
+                    conversation.get("stage"),
+                    conversation.get("current_task_id"),
+                    self._truncate_text(payload.content or ""),
+                    [attachment.file_url or attachment.preview_url for attachment in current_attachments],
+                    payload.action.model_dump(mode="json") if payload.action else None,
+                    payload.client_card_state.model_dump(mode="json", exclude_none=True) if payload.client_card_state else None,
+                )
 
-            yield {"event": "status", "data": {"text": "正在理解你的需求..."}}
+                user_message_id = conversation_repository.create_message(
+                    conversation_id=conversation_id,
+                    task_id=conversation.get("current_task_id"),
+                    role=MessageRole.USER,
+                    content=payload.content or "",
+                )
+                conversation_repository.attach_assets_to_message(user_message_id, asset_ids)
+                conversation_repository.update_conversation(conversation_id, {"updated_at": utc_now()})
 
-            turn = self._build_turn_context(
-                user=user,
-                conversation=conversation_repository.get_conversation(user_id=user.id, conversation_id=conversation_id),
-                payload=payload,
-                attachments=current_attachments,
-            )
-            agent_graph = build_agent_graph(turn)
-            agent_input = build_initial_messages(turn)
+                yield {"event": "status", "data": {"text": "正在理解你的需求..."}}
 
-            final_state: dict[str, Any] | None = None
-            streamed_text_parts: list[str] = []
+                turn = self._build_turn_context(
+                    user=user,
+                    conversation=conversation_repository.get_conversation(user_id=user.id, conversation_id=conversation_id),
+                    payload=payload,
+                    attachments=current_attachments,
+                )
+                agent_graph = build_agent_graph(turn)
+                agent_input = build_initial_messages(turn)
 
-            async for event in agent_graph.astream_events(
-                agent_input,
-                version="v2",
-            ):
-                event_name = event.get("event")
-                if event_name == "on_tool_start":
-                    tool_name = event.get("name")
-                    tool_input = event.get("data", {}).get("input")
-                    logger.info(
-                        "[agent-turn] tool_start conversation=%s tool=%s stage=%s input=%s",
-                        conversation_id,
-                        tool_name,
-                        turn.active_stage.value,
-                        self._safe_preview(tool_input),
-                    )
-                    yield {
-                        "event": "status",
-                        "data": {
-                            "text": self._tool_status_text(tool_name),
-                            "tool_name": tool_name,
-                        },
-                    }
-                    continue
+                final_state: dict[str, Any] | None = None
+                streamed_text_parts: list[str] = []
 
-                if event_name == "on_tool_end":
-                    logger.info(
-                        "[agent-turn] tool_end conversation=%s tool=%s stage=%s output=%s",
-                        conversation_id,
-                        event.get("name"),
-                        turn.active_stage.value,
-                        self._safe_preview(event.get("data", {}).get("output")),
-                    )
-                    continue
+                async for event in agent_graph.astream_events(
+                    agent_input,
+                    version="v2",
+                ):
+                    event_name = event.get("event")
+                    if event_name == "on_tool_start":
+                        tool_name = event.get("name")
+                        tool_input = event.get("data", {}).get("input")
+                        logger.info(
+                            "[agent-turn] tool_start conversation=%s tool=%s stage=%s input=%s",
+                            conversation_id,
+                            tool_name,
+                            turn.active_stage.value,
+                            self._safe_preview(tool_input),
+                        )
+                        yield {
+                            "event": "status",
+                            "data": {
+                                "text": self._tool_status_text(tool_name),
+                                "tool_name": tool_name,
+                            },
+                        }
+                        continue
 
-                if event_name == "on_chat_model_start":
-                    logger.info(
-                        "[agent-turn] llm_start conversation=%s stage=%s",
-                        conversation_id,
-                        turn.active_stage.value,
-                    )
-                    continue
+                    if event_name == "on_tool_end":
+                        logger.info(
+                            "[agent-turn] tool_end conversation=%s tool=%s stage=%s output=%s",
+                            conversation_id,
+                            event.get("name"),
+                            turn.active_stage.value,
+                            self._safe_preview(event.get("data", {}).get("output")),
+                        )
+                        continue
 
-                if event_name == "on_chat_model_stream":
-                    chunk_text = self._extract_chunk_text(event.get("data", {}).get("chunk"))
-                    if chunk_text:
-                        streamed_text_parts.append(chunk_text)
-                        yield {"event": "token", "data": {"text": chunk_text}}
-                    continue
+                    if event_name == "on_chat_model_start":
+                        logger.info(
+                            "[agent-turn] llm_start conversation=%s stage=%s",
+                            conversation_id,
+                            turn.active_stage.value,
+                        )
+                        continue
 
-                if event_name == "on_chat_model_end":
-                    logger.info(
-                        "[agent-turn] llm_end conversation=%s stage=%s",
-                        conversation_id,
-                        turn.active_stage.value,
-                    )
-                    continue
+                    if event_name == "on_chat_model_stream":
+                        chunk_text = self._extract_chunk_text(event.get("data", {}).get("chunk"))
+                        if chunk_text:
+                            streamed_text_parts.append(chunk_text)
+                            yield {"event": "token", "data": {"text": chunk_text}}
+                        continue
 
-                possible_output = event.get("data", {}).get("output")
-                if isinstance(possible_output, dict) and "messages" in possible_output:
-                    final_state = possible_output
+                    if event_name == "on_chat_model_end":
+                        logger.info(
+                            "[agent-turn] llm_end conversation=%s stage=%s",
+                            conversation_id,
+                            turn.active_stage.value,
+                        )
+                        continue
 
-            final_text = self._extract_final_text(final_state) or "".join(streamed_text_parts).strip()
-            if not final_text:
-                final_text = "我已经处理好了，我们继续下一步。"
+                    possible_output = event.get("data", {}).get("output")
+                    if isinstance(possible_output, dict) and "messages" in possible_output:
+                        final_state = possible_output
 
-            logger.info(
-                "[agent-turn] assistant_reply conversation=%s stage=%s card_type=%s reply=%r",
-                conversation_id,
-                turn.active_stage.value,
-                turn.response_card_type,
-                self._truncate_text(final_text),
-            )
-            response = self._persist_assistant_response(
-                user=user,
-                conversation_id=conversation_id,
-                turn=turn,
-                content=final_text,
-            )
-            await self._refresh_summary_if_needed(conversation_id)
-            yield {"event": "final", "data": response.model_dump(mode="json")}
-        except Exception:
-            logger.exception("[agent-turn] failed conversation=%s user_id=%s", conversation_id, user.id)
-            raise
+                final_text = self._extract_final_text(final_state) or "".join(streamed_text_parts).strip()
+                if not final_text:
+                    final_text = "我已经处理好了，我们继续下一步。"
+
+                logger.info(
+                    "[agent-turn] assistant_reply conversation=%s stage=%s card_type=%s reply=%r",
+                    conversation_id,
+                    turn.active_stage.value,
+                    turn.response_card_type,
+                    self._truncate_text(final_text),
+                )
+                response = self._persist_assistant_response(
+                    user=user,
+                    conversation_id=conversation_id,
+                    turn=turn,
+                    content=final_text,
+                )
+                await self._refresh_summary_if_needed(conversation_id)
+                yield {"event": "final", "data": response.model_dump(mode="json")}
+            except Exception:
+                logger.exception("[agent-turn] failed conversation=%s user_id=%s", conversation_id, user.id)
+                raise
 
     def _build_turn_context(
         self,
@@ -264,6 +275,19 @@ class ConversationService:
         current_task = conversation_repository.get_current_task(conversation["id"])
         from app.utils.recipe_snapshot import load_task_recipe_snapshot
 
+        current_task_stage = ConversationStage(current_task["stage"]) if current_task else None
+        current_task_snapshot = load_task_recipe_snapshot(current_task.get("recipe_snapshot_json")) if current_task else None
+        client_card_state = (
+            payload.client_card_state.model_dump(mode="json", exclude_none=True)
+            if payload.client_card_state
+            else {}
+        )
+        view_snapshot = apply_client_card_state_overlay(
+            current_task_snapshot,
+            client_card_state,
+            stage=current_task_stage,
+        )
+
         return AgentTurnContext(
             user=user,
             conversation_id=conversation["id"],
@@ -271,12 +295,13 @@ class ConversationService:
             conversation_stage=ConversationStage(conversation["stage"]),
             conversation_summary=conversation.get("summary_text") or "",
             current_task_id=current_task["id"] if current_task else None,
-            current_task_stage=ConversationStage(current_task["stage"]) if current_task else None,
+            current_task_stage=current_task_stage,
             current_task_source_recipe_id=current_task.get("source_recipe_id") if current_task else None,
-            current_task_snapshot=load_task_recipe_snapshot(current_task.get("recipe_snapshot_json")) if current_task else None,
+            current_task_snapshot=view_snapshot,
             latest_user_content=(payload.content or "").strip(),
             latest_user_action=payload.action,
             latest_attachments=attachments,
+            client_card_state=client_card_state,
             recent_messages=[
                 {
                     "role": message.role,
@@ -464,11 +489,9 @@ class ConversationService:
         for message in reversed(messages):
             if message.role != MessageRole.ASSISTANT:
                 continue
-            existing_cards = [
-                card
-                for card in (message.cards or [])
-                if self._card_type(card) != card_type
-            ]
+            if any(self._card_type(card) == card_type for card in (message.cards or [])):
+                return messages
+            existing_cards = list(message.cards or [])
             existing_cards.append(card_payload)
             message.cards = existing_cards
             return messages

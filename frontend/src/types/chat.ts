@@ -74,6 +74,27 @@ export interface CardAction extends CardActionEvent {
   tone?: 'primary' | 'secondary' | 'ghost'
 }
 
+export interface PantryClientCardState {
+  readyIngredientIds: string[]
+  focusedIngredientId?: string | null
+  flashMode: boolean
+}
+
+export interface CookingGuideClientCardState {
+  currentStep: number
+  focusedStepId?: string | null
+  flashMode: boolean
+}
+
+export interface ConversationClientCardState {
+  pantryStatus?: PantryClientCardState
+  cookingGuide?: CookingGuideClientCardState
+}
+
+export type ClientCardStateUpdate =
+  | ({ type: 'pantry-status' } & PantryClientCardState)
+  | ({ type: 'cooking-guide' } & CookingGuideClientCardState)
+
 export interface TimerRequest {
   stepId: string
   label: string

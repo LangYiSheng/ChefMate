@@ -4,6 +4,7 @@ import type {
   CardActionEvent,
   ChatAttachment,
   ChatMessage,
+  ConversationClientCardState,
   ConversationRecord,
   ConversationStage,
   CookingGuideCard,
@@ -100,6 +101,32 @@ function normalizeAttachment(attachment: any): ChatAttachment {
     fileId: attachment.id ? String(attachment.id) : undefined,
     fileUrl: resolveAssetUrl(attachment.file_url || attachment.preview_url),
   }
+}
+
+function toBackendClientCardState(cardState?: ConversationClientCardState) {
+  if (!cardState) {
+    return undefined
+  }
+
+  const payload: Record<string, unknown> = {}
+
+  if (cardState.pantryStatus) {
+    payload.pantry_status = {
+      ready_ingredient_ids: cardState.pantryStatus.readyIngredientIds,
+      focused_ingredient_id: cardState.pantryStatus.focusedIngredientId,
+      flash_mode: cardState.pantryStatus.flashMode,
+    }
+  }
+
+  if (cardState.cookingGuide) {
+    payload.cooking_guide = {
+      current_step: cardState.cookingGuide.currentStep,
+      focused_step_id: cardState.cookingGuide.focusedStepId,
+      flash_mode: cardState.cookingGuide.flashMode,
+    }
+  }
+
+  return Object.keys(payload).length ? payload : undefined
 }
 
 function normalizeRecipe(record: any): RecipeRecord {
@@ -388,12 +415,18 @@ export async function sendConversationMessage(
     content?: string
     attachments?: Array<{ kind: 'image'; file_id?: string; file_url?: string; name?: string }>
     action?: { action_type: CardActionType; payload: Record<string, unknown> }
+    clientCardState?: ConversationClientCardState
   },
 ) {
   const response = await apiFetch<any>(`/conversations/${conversationId}/messages`, {
     method: 'POST',
     token,
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      content: payload.content,
+      attachments: payload.attachments,
+      action: payload.action,
+      client_card_state: toBackendClientCardState(payload.clientCardState),
+    }),
   })
   return {
     conversation: normalizeConversation(response.conversation),
@@ -408,6 +441,7 @@ export async function streamConversationMessage(
     content?: string
     attachments?: Array<{ kind: 'image'; file_id?: string; file_url?: string; name?: string }>
     action?: { action_type: CardActionType; payload: Record<string, unknown> }
+    clientCardState?: ConversationClientCardState
   },
   onEvent: (event: StreamEventPayload) => void,
 ) {
@@ -417,7 +451,12 @@ export async function streamConversationMessage(
       token,
       headers: { 'Content-Type': 'application/json' },
     }),
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      content: payload.content,
+      attachments: payload.attachments,
+      action: payload.action,
+      client_card_state: toBackendClientCardState(payload.clientCardState),
+    }),
   })
 
   if (!response.ok || !response.body) {

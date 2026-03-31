@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import MessageCardRenderer from './cards/MessageCardRenderer.vue'
-import type { CardActionEvent, ChatMessage, TimerRequest } from '../types/chat'
+import type { CardActionEvent, ChatMessage, ClientCardStateUpdate, TimerRequest } from '../types/chat'
 
 defineProps<{
   message: ChatMessage
   autoStartStepTimer: boolean
+  interactionDisabled: boolean
 }>()
 
 const emit = defineEmits<{
   cardAction: [action: CardActionEvent]
+  cardStateChange: [state: ClientCardStateUpdate]
   timerRequest: [payload: TimerRequest]
 }>()
 
@@ -55,7 +57,9 @@ function cardKey(messageId: string, card: NonNullable<ChatMessage['cards']>[numb
           :key="cardKey(message.id, card, index)"
           :card="card"
           :auto-start-step-timer="autoStartStepTimer"
+          :interaction-disabled="interactionDisabled"
           @action="emit('cardAction', $event)"
+          @state-change="emit('cardStateChange', $event)"
           @start-timer="emit('timerRequest', $event)"
         />
       </div>

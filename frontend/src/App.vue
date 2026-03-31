@@ -29,6 +29,8 @@ import type {
   CardActionEvent,
   ChatAttachment,
   ChatMessage,
+  ClientCardStateUpdate,
+  ConversationClientCardState,
   ConversationRecord,
   ConversationTimerSlot,
   MessageCard,
@@ -96,6 +98,7 @@ const sidebarOpen = ref(false)
 const profilePanelOpen = ref(false)
 const workspaceOnboardingOpen = ref(false)
 const typingConversationId = ref<string | null>(null)
+const conversationClientCardState = ref<Record<string, ConversationClientCardState>>({})
 const streamingStatusText = ref('')
 const draftGreeting = ref('')
 const loadingWorkspace = ref(false)
@@ -693,6 +696,7 @@ async function logout() {
   loadedRecipeIds.value = {}
   workspaceInitialized.value = false
   conversationTimers.value = {}
+  conversationClientCardState.value = {}
   pendingTimerReplacement.value = null
   timerNotice.value = null
   typingConversationId.value = null
@@ -748,6 +752,70 @@ function normalizeConversationCards(conversationList: ConversationRecord[]) {
   })
 
   return conversationList
+}
+
+function updateConversationCardState(state: ClientCardStateUpdate) {
+  const conversationId = visibleConversation.value?.id
+  if (!conversationId || conversationId === draftConversationId) {
+    return
+  }
+
+  const nextState = {
+    ...(conversationClientCardState.value[conversationId] ?? {}),
+  }
+
+  if (state.type === 'pantry-status') {
+    nextState.pantryStatus = {
+      readyIngredientIds: [...state.readyIngredientIds],
+      focusedIngredientId: state.focusedIngredientId ?? null,
+      flashMode: state.flashMode,
+    }
+  } else {
+    nextState.cookingGuide = {
+      currentStep: state.currentStep,
+      focusedStepId: state.focusedStepId ?? null,
+      flashMode: state.flashMode,
+    }
+  }
+
+  conversationClientCardState.value = {
+    ...conversationClientCardState.value,
+    [conversationId]: nextState,
+  }
+}
+
+function buildOutgoingClientCardState(conversationId: string) {
+  const state = conversationClientCardState.value[conversationId]
+  if (!state) {
+    return undefined
+  }
+
+  const payload: ConversationClientCardState = {}
+  if (state.pantryStatus) {
+    payload.pantryStatus = {
+      readyIngredientIds: [...state.pantryStatus.readyIngredientIds],
+      focusedIngredientId: state.pantryStatus.focusedIngredientId ?? null,
+      flashMode: state.pantryStatus.flashMode,
+    }
+  }
+  if (state.cookingGuide) {
+    payload.cookingGuide = {
+      currentStep: state.cookingGuide.currentStep,
+      focusedStepId: state.cookingGuide.focusedStepId ?? null,
+      flashMode: state.cookingGuide.flashMode,
+    }
+  }
+  return Object.keys(payload).length ? payload : undefined
+}
+
+function clearConversationCardState(conversationId: string) {
+  if (!(conversationId in conversationClientCardState.value)) {
+    return
+  }
+
+  const nextState = { ...conversationClientCardState.value }
+  delete nextState[conversationId]
+  conversationClientCardState.value = nextState
 }
 
 async function ensureConversationForSend() {
@@ -811,6 +879,11 @@ async function sendMessage(payload: string | { prompt?: string; attachments?: Ch
   if (!conversation) {
     return
   }
+  if (typingConversationId.value === conversation.id) {
+    return
+  }
+
+  const clientCardState = buildOutgoingClientCardState(conversation.id)
 
   let targetConversation =
     conversations.value.find((item) => item.id === conversation.id) ?? conversation
@@ -853,6 +926,7 @@ async function sendMessage(payload: string | { prompt?: string; attachments?: Ch
           name: attachment.name,
         })),
         action: action ? toBackendActionPayload(action) : undefined,
+        clientCardState,
       },
       ({ event, data }) => {
         if (event === 'status') {
@@ -876,6 +950,7 @@ async function sendMessage(payload: string | { prompt?: string; attachments?: Ch
           targetConversation.stage = data.conversation.stage
           targetConversation.currentRecipe = data.conversation.currentRecipe
           targetConversation.suggestions = data.conversation.suggestions
+          clearConversationCardState(targetConversation.id)
           normalizeConversationCards([targetConversation])
           upsertConversation(targetConversation, true)
           loadedConversationIds.value[targetConversation.id] = true
@@ -900,6 +975,9 @@ async function sendMessage(payload: string | { prompt?: string; attachments?: Ch
 }
 
 function sendCardAction(action: CardActionEvent) {
+  if (isTyping.value) {
+    return
+  }
   void sendMessage({ action })
 }
 
@@ -1096,7 +1174,9 @@ function showRecipeLibrary() {
                     :key="message.id"
                     :message="message"
                     :auto-start-step-timer="profile.autoStartStepTimer"
+                    :interaction-disabled="isTyping"
                     @card-action="sendCardAction"
+                    @card-state-change="updateConversationCardState"
                     @timer-request="requestTimer"
                   />
                 </template>

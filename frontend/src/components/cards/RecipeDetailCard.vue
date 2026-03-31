@@ -3,6 +3,7 @@ import type { CardActionEvent, RecipeDetailCard as RecipeDetailCardType } from '
 
 defineProps<{
   card: RecipeDetailCardType
+  disabled: boolean
 }>()
 
 const emit = defineEmits<{
@@ -11,7 +12,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <section class="card-shell">
+  <section class="card-shell" :class="{ 'is-disabled': disabled }" :aria-disabled="disabled">
     <section class="hero-block">
       <div>
         <h4>{{ card.recipe.name }}</h4>
@@ -87,6 +88,11 @@ const emit = defineEmits<{
   background:
     linear-gradient(145deg, rgba(255, 254, 251, 0.98), rgba(250, 246, 239, 0.94)),
     var(--color-surface-strong);
+}
+
+.card-shell.is-disabled {
+  pointer-events: none;
+  opacity: 0.6;
 }
 
 .hero-block p,

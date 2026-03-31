@@ -20,10 +20,28 @@ class UploadedAttachmentInput(BaseModel):
     name: str | None = None
 
 
+class PantryClientCardStateInput(BaseModel):
+    ready_ingredient_ids: list[str] = Field(default_factory=list)
+    focused_ingredient_id: str | None = None
+    flash_mode: bool = False
+
+
+class CookingGuideClientCardStateInput(BaseModel):
+    current_step: int | None = None
+    focused_step_id: str | None = None
+    flash_mode: bool = False
+
+
+class ClientCardStateInput(BaseModel):
+    pantry_status: PantryClientCardStateInput | None = None
+    cooking_guide: CookingGuideClientCardStateInput | None = None
+
+
 class SendMessageRequest(BaseModel):
     content: str | None = None
     attachments: list[UploadedAttachmentInput] = Field(default_factory=list)
     action: SendMessageAction | None = None
+    client_card_state: ClientCardStateInput | None = None
 
 
 class SendMessageResponse(BaseModel):

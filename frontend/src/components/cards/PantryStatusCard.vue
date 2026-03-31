@@ -1,23 +1,31 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
-import type { CardActionEvent, PantryStatusCard as PantryStatusCardType } from '../../types/chat'
+import type {
+  CardActionEvent,
+  PantryClientCardState,
+  PantryStatusCard as PantryStatusCardType,
+} from '../../types/chat'
 
 const props = defineProps<{
   card: PantryStatusCardType
+  disabled: boolean
 }>()
 
 const emit = defineEmits<{
   action: [action: CardActionEvent]
+  stateChange: [state: PantryClientCardState]
 }>()
 
 const flashMode = ref(false)
 const activeIndex = ref(0)
-const checkedItems = ref(
-  Object.fromEntries(
+const checkedItems = ref<Record<string, boolean>>({})
+
+function buildCheckedState() {
+  return Object.fromEntries(
     props.card.checklist.map((item) => [item.id, item.status === 'ready']),
-  ) as Record<string, boolean>,
-)
+  ) as Record<string, boolean>
+}
 
 const completion = computed(() => {
   const total = props.card.checklist.length
@@ -30,6 +38,9 @@ const completion = computed(() => {
 })
 
 const activeFlashItem = computed(() => props.card.checklist[activeIndex.value] ?? null)
+const readyIngredientIds = computed(() =>
+  props.card.checklist.filter((item) => checkedItems.value[item.id]).map((item) => item.id),
+)
 
 function isReady(itemId: string) {
   return Boolean(checkedItems.value[itemId])
@@ -48,10 +59,32 @@ function moveFlash(offset: number) {
 
   activeIndex.value = nextIndex
 }
+
+watch(
+  () => props.card.checklist.map((item) => `${item.id}:${item.status}`).join('|'),
+  () => {
+    checkedItems.value = buildCheckedState()
+    activeIndex.value = 0
+    flashMode.value = false
+  },
+  { immediate: true },
+)
+
+watch(
+  [readyIngredientIds, flashMode, () => activeFlashItem.value?.id],
+  () => {
+    emit('stateChange', {
+      readyIngredientIds: readyIngredientIds.value,
+      focusedIngredientId: flashMode.value ? (activeFlashItem.value?.id ?? null) : null,
+      flashMode: flashMode.value,
+    })
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
-  <section class="card-shell">
+  <section class="card-shell" :class="{ 'is-disabled': disabled }" :aria-disabled="disabled">
     <div class="card-head">
       <h3>{{ card.title }}</h3>
       <strong>{{ completion }}%</strong>
@@ -130,6 +163,11 @@ function moveFlash(offset: number) {
   border: 1px solid rgba(47, 93, 80, 0.16);
   border-radius: 1.35rem;
   background: rgba(255, 253, 249, 0.98);
+}
+
+.card-shell.is-disabled {
+  pointer-events: none;
+  opacity: 0.6;
 }
 
 .card-head {

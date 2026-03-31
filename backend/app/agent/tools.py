@@ -22,6 +22,7 @@ from app.services.task_service import task_service
 from app.services.vision_service import vision_service
 from app.schemas.profile import UpdateProfileRequest
 from app.utils.recipe_snapshot import (
+    apply_client_card_state_overlay,
     build_task_recipe_snapshot_from_catalog,
     build_task_recipe_snapshot_from_generated,
     flatten_recipe_tags,
@@ -56,6 +57,14 @@ def build_task_patch_payload(
             for item in steps
         ]
     return payload
+
+
+def has_ingredient_status_updates(items: list["IngredientPatchInput"] | None) -> bool:
+    return any(item.status is not None for item in (items or []))
+
+
+def has_step_status_updates(items: list["StepPatchInput"] | None) -> bool:
+    return any(item.status is not None for item in (items or []))
 
 
 TOOL_STATUS_LABELS = {
@@ -491,7 +500,16 @@ def build_stage_tools(turn: AgentTurnContext) -> list[BaseTool]:
             patch=patch_payload,
             mode="shopping",
         )
-        current_turn.current_task_snapshot = result["recipe_snapshot"]
+        next_snapshot = result["recipe_snapshot"]
+        if not has_ingredient_status_updates(ingredients):
+            next_snapshot = apply_client_card_state_overlay(
+                next_snapshot,
+                {"pantry_status": current_turn.client_card_state.get("pantry_status")}
+                if current_turn.client_card_state.get("pantry_status")
+                else {},
+                stage=ConversationStage.PREPARING,
+            ) or next_snapshot
+        current_turn.current_task_snapshot = next_snapshot
         current_turn.response_recipe_name = result["recipe_snapshot"].name
         _log_tool_event(
             "update_task_recipe_for_preparation",
@@ -573,7 +591,16 @@ def build_stage_tools(turn: AgentTurnContext) -> list[BaseTool]:
             patch=patch_payload,
             mode="cooking",
         )
-        current_turn.current_task_snapshot = result["recipe_snapshot"]
+        next_snapshot = result["recipe_snapshot"]
+        if not has_step_status_updates(steps):
+            next_snapshot = apply_client_card_state_overlay(
+                next_snapshot,
+                {"cooking_guide": current_turn.client_card_state.get("cooking_guide")}
+                if current_turn.client_card_state.get("cooking_guide")
+                else {},
+                stage=ConversationStage.COOKING,
+            ) or next_snapshot
+        current_turn.current_task_snapshot = next_snapshot
         current_turn.response_recipe_name = result["recipe_snapshot"].name
         _log_tool_event(
             "update_task_recipe_for_cooking",

@@ -4,7 +4,7 @@ from typing import Any, Literal
 from uuid import uuid4
 
 from app.domain.cards import has_ready_for_cooking
-from app.domain.enums import IngredientStatus, StepStatus, TaskRecipeSourceType
+from app.domain.enums import ConversationStage, IngredientStatus, StepStatus, TaskRecipeSourceType
 from app.domain.models import TaskRecipeIngredient, TaskRecipeSnapshot, TaskRecipeStep
 
 
@@ -134,6 +134,48 @@ def dump_task_recipe_snapshot(snapshot: TaskRecipeSnapshot | None) -> str | None
     import json
 
     return json.dumps(snapshot.model_dump(mode="json"), ensure_ascii=False)
+
+
+def apply_client_card_state_overlay(
+    snapshot: TaskRecipeSnapshot | None,
+    client_card_state: dict[str, Any] | None,
+    *,
+    stage: ConversationStage | None,
+) -> TaskRecipeSnapshot | None:
+    if snapshot is None or not client_card_state:
+        return snapshot
+
+    view_snapshot = snapshot.model_copy(deep=True)
+
+    pantry_state = client_card_state.get("pantry_status")
+    if pantry_state and stage == ConversationStage.PREPARING:
+        ready_ids = {str(item) for item in pantry_state.get("ready_ingredient_ids") or [] if item}
+        for ingredient in view_snapshot.ingredients:
+            if ingredient.id in ready_ids:
+                ingredient.status = IngredientStatus.READY
+            elif ingredient.status == IngredientStatus.READY:
+                ingredient.status = IngredientStatus.PENDING
+        normalize_snapshot_defaults(view_snapshot)
+
+    cooking_state = client_card_state.get("cooking_guide")
+    if cooking_state and stage == ConversationStage.COOKING and view_snapshot.steps:
+        target_step = None
+        focused_step_id = cooking_state.get("focused_step_id")
+        current_step = cooking_state.get("current_step")
+
+        if focused_step_id:
+            target_step = next((item for item in view_snapshot.steps if item.id == focused_step_id), None)
+        if target_step is None and isinstance(current_step, int):
+            target_step = next((item for item in view_snapshot.steps if item.step_no == current_step), None)
+
+        if target_step is not None:
+            for step in view_snapshot.steps:
+                if step.status != StepStatus.DONE:
+                    step.status = StepStatus.PENDING
+            target_step.status = StepStatus.CURRENT
+            normalize_step_progress(view_snapshot)
+
+    return view_snapshot
 
 
 def flatten_recipe_tags(tags: dict[str, list[str]]) -> list[str]:

@@ -21,6 +21,7 @@ class AgentTurnContext:
     latest_user_content: str
     latest_user_action: SendMessageAction | None
     latest_attachments: list[MessageAttachment] = field(default_factory=list)
+    client_card_state: dict[str, Any] = field(default_factory=dict)
     recent_messages: list[dict[str, Any]] = field(default_factory=list)
     recent_finished_tasks: list[dict[str, Any]] = field(default_factory=list)
     tag_catalog: dict[str, list[str]] = field(default_factory=dict)

@@ -6,6 +6,7 @@ import type {
 
 defineProps<{
   card: RecipeRecommendationsCardType
+  disabled: boolean
 }>()
 
 const emit = defineEmits<{
@@ -14,7 +15,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <section class="card-shell">
+  <section class="card-shell" :class="{ 'is-disabled': disabled }" :aria-disabled="disabled">
     <div class="card-head">
       <h3>{{ card.title }}</h3>
       <span>{{ card.recipes.length }} 道候选</span>
@@ -64,6 +65,11 @@ const emit = defineEmits<{
   background:
     linear-gradient(145deg, rgba(255, 254, 251, 0.98), rgba(250, 246, 239, 0.94)),
     var(--color-surface-strong);
+}
+
+.card-shell.is-disabled {
+  pointer-events: none;
+  opacity: 0.6;
 }
 
 .card-head {

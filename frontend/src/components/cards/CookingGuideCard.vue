@@ -3,22 +3,34 @@ import { computed, ref, watch } from 'vue'
 
 import type {
   CookingGuideCard as CookingGuideCardType,
+  CookingGuideClientCardState,
   TimerRequest,
 } from '../../types/chat'
 
 const props = defineProps<{
   card: CookingGuideCardType
   autoStartTimer: boolean
+  disabled: boolean
 }>()
 
 const emit = defineEmits<{
   startTimer: [payload: TimerRequest]
+  stateChange: [state: CookingGuideClientCardState]
 }>()
 
 const flashMode = ref(false)
 const safeSteps = computed(() => props.card.steps ?? [])
-const activeIndex = ref(Math.max(props.card.currentStep - 1, 0))
+const activeIndex = ref(0)
 const activeStep = computed(() => safeSteps.value[activeIndex.value] ?? null)
+
+function resolveInitialIndex() {
+  if (!safeSteps.value.length) {
+    return 0
+  }
+
+  const requestedIndex = Math.max(props.card.currentStep - 1, 0)
+  return Math.min(requestedIndex, safeSteps.value.length - 1)
+}
 
 function moveStep(offset: number) {
   const nextIndex = activeIndex.value + offset
@@ -43,6 +55,15 @@ function requestTimer() {
 }
 
 watch(
+  () => `${props.card.currentStep}:${props.card.steps.map((step) => `${step.id}:${step.status}`).join('|')}`,
+  () => {
+    activeIndex.value = resolveInitialIndex()
+    flashMode.value = false
+  },
+  { immediate: true },
+)
+
+watch(
   [() => props.autoStartTimer, () => activeStep.value?.id],
   ([autoStartTimer, activeStepId], previousValue) => {
     if (!autoStartTimer || !activeStepId || !activeStep.value?.timerSeconds) {
@@ -58,10 +79,26 @@ watch(
   },
   { immediate: true },
 )
+
+watch(
+  [activeIndex, flashMode, () => activeStep.value?.id],
+  () => {
+    emit('stateChange', {
+      currentStep: activeIndex.value + 1,
+      focusedStepId: activeStep.value?.id ?? null,
+      flashMode: flashMode.value,
+    })
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
-  <section class="card-shell cooking-guide-card">
+  <section
+    class="card-shell cooking-guide-card"
+    :class="{ 'is-disabled': disabled }"
+    :aria-disabled="disabled"
+  >
     <div class="card-head">
       <h3>{{ card.title }}</h3>
       <span>步骤 {{ activeIndex + 1 }}/{{ card.totalSteps }}</span>
@@ -131,6 +168,11 @@ watch(
   border: 1px solid rgba(47, 93, 80, 0.16);
   border-radius: 1.35rem;
   background: rgba(255, 253, 249, 0.98);
+}
+
+.card-shell.is-disabled {
+  pointer-events: none;
+  opacity: 0.6;
 }
 
 .card-head {

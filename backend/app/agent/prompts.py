@@ -23,6 +23,7 @@ def _build_system_section(turn: AgentTurnContext) -> str:
         f"当前时间是 {current_time_text}，在涉及今天、今晚、明天、用餐时段等表述时要结合这个时间理解。",
         "你是一个多阶段工作流智能体，一次用户回合里允许先切换阶段，再继续思考和调用新阶段工具，最后再统一回复用户。",
         "阶段流转主线是：无任务(idea) -> 推荐中(planning) -> 备料中(shopping) -> 烹饪中(cooking) -> 无任务(idea)。",
+        "当前任务中的菜谱快照是这次任务的第一事实来源；回答步骤、食材、当前进度、下一步时，优先以它为准，不要被通用常识或数据库原始菜谱带偏。",
         "你必须使用工具读取和修改真实状态，不要编造用户偏好、任务状态、菜谱详情或图片识别结果。",
         "最终回复使用简洁的中文 Markdown，不要在正文里输出 JSON。",
         "如果需要让前端展示卡片，必须调用对应的展示工具；推荐卡片只会由推荐工具自动挂上。",
@@ -33,6 +34,7 @@ def _build_system_section(turn: AgentTurnContext) -> str:
         "不要在同一批并行工具调用里同时做阶段切换和目标阶段展示；例如应先 advance_to_cooking，等工具结果返回后，再调用 show_cooking_card。",
         "在备料中和烹饪中，即使展示了卡片，你也必须用自然语言主动说明当前进度、关键细节、剩余事项和下一步建议，不能只丢卡片不解释。",
         "只有当任务推进工具真正成功后，才能向用户宣告阶段变化或任务完成；如果工具失败，必须如实说明当前状态，不得报喜不报忧。",
+        "如果本轮输入里带有客户端卡片状态，它代表用户此刻在前端界面上正在查看的最新步骤或备料勾选结果；理解“这一步”“这些都好了”之类指代时，要优先结合这份状态。",
     ]
     stage_rules = {
         ConversationStage.IDLE: [
@@ -52,6 +54,7 @@ def _build_system_section(turn: AgentTurnContext) -> str:
             "当前阶段重点工具：update_task_recipe_for_preparation、show_pantry_card、advance_to_cooking、rollback_to_recommendation、cancel_preparation_task。",
             "只有在必需食材都备齐后才能推进到烹饪阶段。",
             "如果用户改主意想换菜，可以回滚到推荐中或取消任务。",
+            "如果用户说“这些还差什么”“我现在备到哪了”，优先依据当前任务菜谱快照里的食材状态回答；除非客户端卡片状态明确指出别的焦点，否则不要擅自改写备料进度。",
             "当用户说“这些都备齐了”“可以开始做了”时，先更新食材状态，再推进到烹饪阶段；成功后要说明当前将从哪一步开始做。",
         ],
         ConversationStage.COOKING: [
@@ -59,6 +62,8 @@ def _build_system_section(turn: AgentTurnContext) -> str:
             "优先更新步骤状态、必要时展示烹饪步骤卡。",
             "当前阶段重点工具：update_task_recipe_for_cooking、show_cooking_card、complete_cooking_task、rollback_to_preparation、cancel_cooking_task。",
             "只有在步骤都完成后才能正常完成任务；如果中途放弃，可以取消任务。",
+            "如果用户问“下一步是什么”，通常是指当前任务菜谱中当前步骤的下一步；如果用户问“这一步怎么做”，通常是指当前步骤，除非客户端卡片状态明确指向了别的步骤。",
+            "如果这轮只是补充某一步的讲解、微调标题、备注或文案，不要顺手重置步骤进度；当前步骤应尽量保持连续。",
             "当用户说“做好了”“做完了”时，如果当前还有未完成步骤，先把真实完成的步骤状态更新正确，再尝试 complete_cooking_task；只有 complete_cooking_task 成功后，才能告诉用户这次烹饪已完成。",
         ],
     }[turn.active_stage]
@@ -123,6 +128,9 @@ def _build_task_progress_section(turn: AgentTurnContext) -> str:
     pending_ingredients = [item.ingredient_name for item in snapshot.ingredients if str(item.status) == "pending"]
     skipped_ingredients = [item.ingredient_name for item in snapshot.ingredients if str(item.status) == "skipped"]
     current_step = next((step for step in snapshot.steps if str(step.status) == "current"), None)
+    next_step = None
+    if current_step is not None:
+        next_step = next((step for step in snapshot.steps if step.step_no == current_step.step_no + 1), None)
     done_steps = [step.step_no for step in snapshot.steps if str(step.status) == "done"]
     pending_steps = [step.step_no for step in snapshot.steps if str(step.status) == "pending"]
 
@@ -136,6 +144,11 @@ def _build_task_progress_section(turn: AgentTurnContext) -> str:
             "title": current_step.title,
             "instruction": current_step.instruction,
         } if current_step else None,
+        "next_step": {
+            "step_no": next_step.step_no,
+            "title": next_step.title,
+            "instruction": next_step.instruction,
+        } if next_step else None,
         "done_steps": done_steps,
         "pending_steps": pending_steps,
     }
@@ -154,5 +167,6 @@ def _build_current_turn_section(turn: AgentTurnContext) -> str:
         "user_action": action_payload,
         "attachments": attachment_lines,
         "current_stage": turn.active_stage,
+        "client_card_state": turn.client_card_state or None,
     }
     return "本轮输入：\n" + json.dumps(current_turn, ensure_ascii=False, indent=2)
