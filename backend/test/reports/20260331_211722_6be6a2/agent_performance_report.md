@@ -29,61 +29,61 @@
 
 ## 4. 评价指标
 
-- Case Pass Rate
-- Required Tool Hit Rate
-- Forbidden Tool Violation Rate
-- Tool Order Compliance Rate
-- Final Stage Accuracy
-- Task State Assertion Pass Rate
-- End-to-End Completion Rate
-- Error-Free Run Rate
-- LLM Average Score
+- 样例通过率
+- 必需工具命中率
+- 禁止工具违规率
+- 工具顺序符合率
+- 最终阶段正确率
+- 任务状态断言通过率
+- 端到端完成率
+- 无异常运行率
+- LLM 裁判平均分
 
 ## 5. 数据集上的性能结果
 
 ### 总体结果
-- case_pass_rate: 0.8621
-- required_tool_hit_rate: 0.9655
-- forbidden_tool_violation_rate: 0.0
-- tool_order_compliance_rate: 0.9655
-- final_stage_accuracy: 0.8793
-- task_state_assertion_pass_rate: 1.0
-- end_to_end_completion_rate: 0.8333
-- error_free_run_rate: 1.0
-- llm_average_score: 4.4397
+- 样例通过率: 0.8621
+- 必需工具命中率: 0.9655
+- 禁止工具违规率: 0.0
+- 工具顺序符合率: 0.9655
+- 最终阶段正确率: 0.8793
+- 任务状态断言通过率: 1.0
+- 端到端完成率: 0.8333
+- 无异常运行率: 1.0
+- LLM 裁判平均分: 4.4397
 
 ### Suite：end_to_end
-- case_pass_rate: 0.8333
-- required_tool_hit_rate: 0.8333
-- forbidden_tool_violation_rate: 0.0
-- tool_order_compliance_rate: 1.0
-- final_stage_accuracy: 0.8333
-- task_state_assertion_pass_rate: 1.0
-- end_to_end_completion_rate: 0.8333
-- error_free_run_rate: 1.0
-- llm_average_score: 4.375
+- 样例通过率: 0.8333
+- 必需工具命中率: 0.8333
+- 禁止工具违规率: 0.0
+- 工具顺序符合率: 1.0
+- 最终阶段正确率: 0.8333
+- 任务状态断言通过率: 1.0
+- 端到端完成率: 0.8333
+- 无异常运行率: 1.0
+- LLM 裁判平均分: 4.375
 
 ### Suite：stage_capability
-- case_pass_rate: 0.9286
-- required_tool_hit_rate: 1.0
-- forbidden_tool_violation_rate: 0.0
-- tool_order_compliance_rate: 1.0
-- final_stage_accuracy: 0.9286
-- task_state_assertion_pass_rate: 1.0
-- end_to_end_completion_rate: 0.0
-- error_free_run_rate: 1.0
-- llm_average_score: 4.5
+- 样例通过率: 0.9286
+- 必需工具命中率: 1.0
+- 禁止工具违规率: 0.0
+- 工具顺序符合率: 1.0
+- 最终阶段正确率: 0.9286
+- 任务状态断言通过率: 1.0
+- 端到端完成率: 0.0
+- 无异常运行率: 1.0
+- LLM 裁判平均分: 4.5
 
 ### Suite：transition_decision
-- case_pass_rate: 0.7778
-- required_tool_hit_rate: 1.0
-- forbidden_tool_violation_rate: 0.0
-- tool_order_compliance_rate: 0.8889
-- final_stage_accuracy: 0.8333
-- task_state_assertion_pass_rate: 1.0
-- end_to_end_completion_rate: 0.0
-- error_free_run_rate: 1.0
-- llm_average_score: 4.3889
+- 样例通过率: 0.7778
+- 必需工具命中率: 1.0
+- 禁止工具违规率: 0.0
+- 工具顺序符合率: 0.8889
+- 最终阶段正确率: 0.8333
+- 任务状态断言通过率: 1.0
+- 端到端完成率: 0.0
+- 无异常运行率: 1.0
+- LLM 裁判平均分: 4.3889
 
 
 ## 6. 典型失败案例与误差分析

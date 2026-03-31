@@ -8,6 +8,19 @@ from pathlib import Path
 from typing import Any
 
 
+METRIC_LABELS = {
+    "case_pass_rate": "样例通过率",
+    "required_tool_hit_rate": "必需工具命中率",
+    "forbidden_tool_violation_rate": "禁止工具违规率",
+    "tool_order_compliance_rate": "工具顺序符合率",
+    "final_stage_accuracy": "最终阶段正确率",
+    "task_state_assertion_pass_rate": "任务状态断言通过率",
+    "end_to_end_completion_rate": "端到端完成率",
+    "error_free_run_rate": "无异常运行率",
+    "llm_average_score": "LLM 裁判平均分",
+}
+
+
 def build_summary_payload(
     *,
     run_id: str,
@@ -120,15 +133,15 @@ def build_markdown_report(summary: dict[str, Any]) -> str:
     lines.append("")
     lines.append("## 4. 评价指标")
     lines.append("")
-    lines.append("- Case Pass Rate")
-    lines.append("- Required Tool Hit Rate")
-    lines.append("- Forbidden Tool Violation Rate")
-    lines.append("- Tool Order Compliance Rate")
-    lines.append("- Final Stage Accuracy")
-    lines.append("- Task State Assertion Pass Rate")
-    lines.append("- End-to-End Completion Rate")
-    lines.append("- Error-Free Run Rate")
-    lines.append("- LLM Average Score")
+    lines.append("- 样例通过率")
+    lines.append("- 必需工具命中率")
+    lines.append("- 禁止工具违规率")
+    lines.append("- 工具顺序符合率")
+    lines.append("- 最终阶段正确率")
+    lines.append("- 任务状态断言通过率")
+    lines.append("- 端到端完成率")
+    lines.append("- 无异常运行率")
+    lines.append("- LLM 裁判平均分")
     lines.append("")
     lines.append("## 5. 数据集上的性能结果")
     lines.append("")
@@ -168,7 +181,8 @@ def _render_metric_block(title: str, metrics: dict[str, Any]) -> list[str]:
         lines.append("")
         return lines
     for key, value in metrics.items():
-        lines.append(f"- {key}: {value}")
+        label = METRIC_LABELS.get(key, key)
+        lines.append(f"- {label}: {value}")
     lines.append("")
     return lines
 
