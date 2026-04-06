@@ -311,6 +311,7 @@ export function useVoiceInput(options: UseVoiceInputOptions) {
   const statusText = ref('')
   const transcript = ref('')
   const errorText = ref('')
+  const standbyPaused = ref(false)
 
   const isSupported = computed(
     () =>
@@ -512,6 +513,7 @@ export function useVoiceInput(options: UseVoiceInputOptions) {
     await releaseAudioPipeline()
     wakeupChecking = false
     finalizeInFlight = false
+    standbyPaused.value = false
     mode.value = 'idle'
     statusText.value = ''
   }
@@ -543,6 +545,13 @@ export function useVoiceInput(options: UseVoiceInputOptions) {
 
   function clearError() {
     errorText.value = ''
+  }
+
+  function applyStandbyPausedPresentation() {
+    standbyPaused.value = true
+    mode.value = 'standby'
+    transcript.value = ''
+    statusText.value = '待命已暂停，等这轮回答结束后继续监听'
   }
 
   function handleAudioChunk(buffer: ArrayBuffer) {
@@ -780,6 +789,7 @@ export function useVoiceInput(options: UseVoiceInputOptions) {
     const nextToken = createOperationToken()
     finalizeInFlight = false
     wakeupChecking = false
+    standbyPaused.value = false
     clearError()
     transcript.value = initialText.trim()
     recognitionPrefix = initialText.trim()
@@ -817,6 +827,7 @@ export function useVoiceInput(options: UseVoiceInputOptions) {
     const nextToken = createOperationToken()
     finalizeInFlight = false
     wakeupChecking = false
+    standbyPaused.value = false
     clearError()
     transcript.value = ''
     mode.value = 'standby'
@@ -885,9 +896,10 @@ export function useVoiceInput(options: UseVoiceInputOptions) {
 
       clearError()
       transcript.value = ''
-      const standbyTask = shouldResumeStandby ? startStandby() : Promise.resolve()
+      if (shouldResumeStandby) {
+        applyStandbyPausedPresentation()
+      }
       await options.onFinalText(text)
-      await standbyTask
     } finally {
       finalizeInFlight = false
     }
@@ -938,6 +950,34 @@ export function useVoiceInput(options: UseVoiceInputOptions) {
     await stopActive(reason, { disableStandby: true })
   }
 
+  async function pauseStandby() {
+    if (!standbyRequested) {
+      return
+    }
+
+    if (standbyPaused.value) {
+      applyStandbyPausedPresentation()
+      return
+    }
+
+    invalidatePendingOperations()
+    stopRecordingWatchdog()
+    wakeupChecking = false
+    await closeRecognitionSocket()
+    await releaseAudioPipeline()
+    applyStandbyPausedPresentation()
+  }
+
+  async function resumeStandby() {
+    if (!standbyRequested) {
+      return
+    }
+    if (!standbyPaused.value && (mode.value === 'standby' || mode.value === 'wakeup-checking')) {
+      return
+    }
+    await startStandby()
+  }
+
   function isStandbyActive() {
     return standbyRequested
   }
@@ -972,6 +1012,7 @@ export function useVoiceInput(options: UseVoiceInputOptions) {
     statusText,
     transcript,
     errorText,
+    standbyPaused,
     isSupported,
     isBusy,
     isStandbyActive,
@@ -979,6 +1020,8 @@ export function useVoiceInput(options: UseVoiceInputOptions) {
     startStandby,
     stopActive,
     stopAll,
+    pauseStandby,
+    resumeStandby,
     clearVoiceFeedback,
     setExternalError,
   }

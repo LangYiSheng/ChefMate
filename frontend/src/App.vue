@@ -915,6 +915,8 @@ async function sendMessage(payload: string | { prompt?: string; attachments?: Ch
     return
   }
 
+  const shouldResumeStandbyAfterReply = voiceInput.isStandbyActive()
+
   if (
     voiceInput.mode.value === 'recording' ||
     voiceInput.mode.value === 'starting' ||
@@ -923,108 +925,118 @@ async function sendMessage(payload: string | { prompt?: string; attachments?: Ch
     await voiceInput.stopActive('manual_stop')
   }
 
-  const conversation = await ensureConversationForSend()
-  if (!conversation) {
-    return
-  }
-  if (typingConversationId.value === conversation.id) {
-    return
+  if (shouldResumeStandbyAfterReply) {
+    await voiceInput.pauseStandby()
   }
 
-  const clientCardState = buildOutgoingClientCardState(conversation.id)
+  try {
+    const conversation = await ensureConversationForSend()
+    if (!conversation) {
+      return
+    }
+    if (typingConversationId.value === conversation.id) {
+      return
+    }
 
-  let targetConversation =
-    conversations.value.find((item) => item.id === conversation.id) ?? conversation
+    const clientCardState = buildOutgoingClientCardState(conversation.id)
 
-  if (targetConversation.id && targetConversation.id !== draftConversationId) {
+    let targetConversation =
+      conversations.value.find((item) => item.id === conversation.id) ?? conversation
+
+    if (targetConversation.id && targetConversation.id !== draftConversationId) {
+      try {
+        const synced = await syncConversationFromBackend(targetConversation.id)
+        if (synced) {
+          targetConversation = conversations.value.find((item) => item.id === synced.id) ?? synced
+        }
+      } catch {
+        // ignore sync failure and continue with current local state
+      }
+    }
+
+    const userMessage: ChatMessage = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content: prompt || describeAction(action),
+      attachments: hasAttachments ? attachments : undefined,
+      createdAt: formatNow(),
+    }
+    targetConversation.messages.push(userMessage)
+
+    const placeholder = createStreamingAssistantMessage()
+    targetConversation.messages.push(placeholder)
+    scheduleScrollToBottom('smooth')
+    typingConversationId.value = targetConversation.id
+    streamingStatusText.value = '正在理解你的需求...'
+
     try {
+      await streamConversationMessage(
+        token,
+        targetConversation.id,
+        {
+          content: prompt || undefined,
+          attachments: attachments.map((attachment) => ({
+            kind: 'image',
+            file_id: attachment.fileId,
+            file_url: attachment.fileUrl,
+            name: attachment.name,
+          })),
+          action: action ? toBackendActionPayload(action) : undefined,
+          clientCardState,
+        },
+        ({ event, data }) => {
+          if (event === 'status') {
+            streamingStatusText.value = data.text || '正在处理...'
+            return
+          }
+
+          if (event === 'token') {
+            placeholder.content += data.text || ''
+            scheduleScrollToBottom('auto')
+            return
+          }
+
+          if (event === 'final') {
+            const index = targetConversation.messages.findIndex((message) => message.id === placeholder.id)
+            if (index >= 0) {
+              targetConversation.messages[index] = data.message
+            } else {
+              targetConversation.messages.push(data.message)
+            }
+            targetConversation.title = data.conversation.title
+            targetConversation.stage = data.conversation.stage
+            targetConversation.currentRecipe = data.conversation.currentRecipe
+            targetConversation.suggestions = data.conversation.suggestions
+            clearConversationCardState(targetConversation.id)
+            normalizeConversationCards([targetConversation])
+            upsertConversation(targetConversation, true)
+            loadedConversationIds.value[targetConversation.id] = true
+            scheduleScrollToBottom('smooth')
+            return
+          }
+
+          if (event === 'error') {
+            placeholder.content = data.detail || '消息发送失败，请稍后重试。'
+          }
+        },
+      )
       const synced = await syncConversationFromBackend(targetConversation.id)
       if (synced) {
         targetConversation = conversations.value.find((item) => item.id === synced.id) ?? synced
       }
-    } catch {
-      // ignore sync failure and continue with current local state
+      scheduleScrollToBottom('smooth')
+    } catch (error) {
+      placeholder.content = error instanceof Error ? error.message : '消息发送失败，请稍后重试。'
+      scheduleScrollToBottom('smooth')
+    } finally {
+      typingConversationId.value = null
+      streamingStatusText.value = ''
+      scheduleScrollToBottom('smooth')
     }
-  }
-
-  const userMessage: ChatMessage = {
-    id: `user-${Date.now()}`,
-    role: 'user',
-    content: prompt || describeAction(action),
-    attachments: hasAttachments ? attachments : undefined,
-    createdAt: formatNow(),
-  }
-  targetConversation.messages.push(userMessage)
-
-  const placeholder = createStreamingAssistantMessage()
-  targetConversation.messages.push(placeholder)
-  scheduleScrollToBottom('smooth')
-  typingConversationId.value = targetConversation.id
-  streamingStatusText.value = '正在理解你的需求...'
-
-  try {
-    await streamConversationMessage(
-      token,
-      targetConversation.id,
-      {
-        content: prompt || undefined,
-        attachments: attachments.map((attachment) => ({
-          kind: 'image',
-          file_id: attachment.fileId,
-          file_url: attachment.fileUrl,
-          name: attachment.name,
-        })),
-        action: action ? toBackendActionPayload(action) : undefined,
-        clientCardState,
-      },
-      ({ event, data }) => {
-        if (event === 'status') {
-          streamingStatusText.value = data.text || '正在处理...'
-          return
-        }
-
-        if (event === 'token') {
-          placeholder.content += data.text || ''
-          scheduleScrollToBottom('auto')
-          return
-        }
-
-        if (event === 'final') {
-          const index = targetConversation.messages.findIndex((message) => message.id === placeholder.id)
-          if (index >= 0) {
-            targetConversation.messages[index] = data.message
-          } else {
-            targetConversation.messages.push(data.message)
-          }
-          targetConversation.title = data.conversation.title
-          targetConversation.stage = data.conversation.stage
-          targetConversation.currentRecipe = data.conversation.currentRecipe
-          targetConversation.suggestions = data.conversation.suggestions
-          clearConversationCardState(targetConversation.id)
-          normalizeConversationCards([targetConversation])
-          upsertConversation(targetConversation, true)
-          loadedConversationIds.value[targetConversation.id] = true
-          scheduleScrollToBottom('smooth')
-          return
-        }
-
-        if (event === 'error') {
-          placeholder.content = data.detail || '消息发送失败，请稍后重试。'
-        }
-      },
-    )
-    const synced = await syncConversationFromBackend(targetConversation.id)
-    if (synced) {
-      targetConversation = conversations.value.find((item) => item.id === synced.id) ?? synced
-    }
-    scheduleScrollToBottom('smooth')
-  } catch (error) {
-    placeholder.content = error instanceof Error ? error.message : '消息发送失败，请稍后重试。'
-    scheduleScrollToBottom('smooth')
   } finally {
-    typingConversationId.value = null
-    streamingStatusText.value = ''
-    scheduleScrollToBottom('smooth')
+    if (shouldResumeStandbyAfterReply) {
+      await voiceInput.resumeStandby()
+    }
   }
 }
 
@@ -1350,6 +1362,7 @@ function showRecipeLibrary() {
               :voice-status-text="voiceInput.statusText.value"
               :voice-transcript="voiceInput.transcript.value"
               :voice-error-text="voiceInput.errorText.value"
+              :voice-standby-paused="voiceInput.standbyPaused.value"
               :wake-word-enabled="profile.voiceWakeWordEnabled"
               @send="sendMessage"
               @request-voice-record="requestVoiceRecord"

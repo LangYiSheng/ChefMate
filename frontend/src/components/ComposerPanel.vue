@@ -13,6 +13,7 @@ const props = defineProps<{
   voiceStatusText?: string
   voiceTranscript?: string
   voiceErrorText?: string
+  voiceStandbyPaused?: boolean
   wakeWordEnabled?: boolean
 }>()
 
@@ -25,26 +26,22 @@ const emit = defineEmits<{
 const draft = ref('')
 const attachment = ref<(ChatAttachment & { status: 'uploading' | 'ready' | 'error' }) | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
-const voiceModeLabel = computed(() => {
-  if (props.voiceMode === 'recording') {
-    return '录音中'
-  }
-  if (props.voiceMode === 'stopping') {
-    return '结束中'
-  }
-  if (props.voiceMode === 'standby') {
-    return '待命中'
-  }
-  if (props.voiceMode === 'wakeup-checking') {
-    return '唤醒检测'
-  }
-  if (props.voiceMode === 'starting') {
-    return '准备中'
-  }
-  return '语音输入'
-})
+
+const isVoicePresentationMode = computed(() => (props.voiceMode ?? 'idle') !== 'idle')
+const isVoiceStandbyState = computed(
+  () => props.voiceMode === 'standby' || props.voiceMode === 'wakeup-checking',
+)
+const isVoiceInputState = computed(
+  () =>
+    props.voiceMode === 'starting' ||
+    props.voiceMode === 'recording' ||
+    props.voiceMode === 'stopping',
+)
+
 const voiceActionLabel = computed(() =>
-  props.voiceMode === 'recording' || props.voiceMode === 'stopping' ? '停止' : '语音',
+  props.voiceMode === 'starting' || props.voiceMode === 'recording' || props.voiceMode === 'stopping'
+    ? '停止'
+    : '语音',
 )
 const standbyActionLabel = computed(() =>
   props.voiceMode === 'standby' || props.voiceMode === 'wakeup-checking' ? '结束待命' : '待命',
@@ -53,6 +50,7 @@ const voiceBlockedByAttachment = computed(() => attachment.value !== null)
 const voiceDisabled = computed(
   () => props.disabled || voiceBlockedByAttachment.value || props.voiceSupported === false,
 )
+const uploadDisabled = computed(() => props.disabled || isVoicePresentationMode.value)
 const standbyDisabled = computed(
   () =>
     voiceDisabled.value ||
@@ -60,14 +58,63 @@ const standbyDisabled = computed(
     props.voiceMode === 'starting' ||
     props.voiceMode === 'stopping',
 )
-const showVoiceFeedback = computed(
-  () => Boolean(props.voiceStatusText || props.voiceTranscript || props.voiceErrorText),
+const sendDisabled = computed(
+  () =>
+    props.disabled ||
+    isVoicePresentationMode.value ||
+    attachment.value?.status === 'uploading' ||
+    attachment.value?.status === 'error',
 )
+const displayedInputValue = computed({
+  get: () => (isVoicePresentationMode.value ? props.voiceTranscript || '' : draft.value),
+  set: (value: string) => {
+    if (!isVoicePresentationMode.value) {
+      draft.value = value
+    }
+  },
+})
+const composerPlaceholder = computed(() => {
+  if (props.voiceErrorText && !props.voiceTranscript) {
+    return props.voiceErrorText
+  }
+  if (props.voiceStandbyPaused) {
+    return '待命已暂停，等这轮回答结束后会自动继续'
+  }
+  if (props.voiceMode === 'standby') {
+    return '待命中，说“小厨小厨”开始语音输入'
+  }
+  if (props.voiceMode === 'wakeup-checking') {
+    return '正在识别唤醒词，请继续说“小厨小厨”'
+  }
+  if (props.voiceMode === 'starting') {
+    return '正在打开麦克风，马上就能开始说'
+  }
+  if (props.voiceMode === 'recording') {
+    return '正在听你说，直接说想吃什么就好'
+  }
+  if (props.voiceMode === 'stopping') {
+    return '正在整理这段语音，请稍等一下'
+  }
+  return '尽管说出你的需求吧！'
+})
+const composerCardClass = computed(() => ({
+  'voice-presenting': isVoicePresentationMode.value,
+  'voice-standby': isVoiceStandbyState.value && !props.voiceStandbyPaused,
+  'voice-standby-paused': isVoiceStandbyState.value && props.voiceStandbyPaused,
+  'voice-active': isVoiceInputState.value,
+  'voice-checking': props.voiceMode === 'wakeup-checking',
+}))
+const composerInputClass = computed(() => ({
+  'voice-mode': isVoicePresentationMode.value,
+  'voice-standby-input': isVoiceStandbyState.value,
+  'voice-active-input': isVoiceInputState.value,
+  paused: props.voiceStandbyPaused,
+}))
 
 function submit() {
   const content = draft.value.trim()
   if (
-    props.disabled ||
+    sendDisabled.value ||
     (!content && !attachment.value) ||
     attachment.value?.status === 'uploading' ||
     attachment.value?.status === 'error'
@@ -84,7 +131,7 @@ function submit() {
 }
 
 function useSuggestion(suggestion: string) {
-  if (props.disabled) {
+  if (props.disabled || isVoicePresentationMode.value) {
     return
   }
 
@@ -92,6 +139,10 @@ function useSuggestion(suggestion: string) {
 }
 
 function onKeydown(event: KeyboardEvent) {
+  if (isVoicePresentationMode.value) {
+    return
+  }
+
   if (event.key === 'Enter' && !event.shiftKey) {
     event.preventDefault()
     submit()
@@ -110,7 +161,7 @@ function normalizeAttachment(item: ChatAttachment & { status: 'uploading' | 'rea
 }
 
 function triggerFilePicker() {
-  if (props.disabled) {
+  if (uploadDisabled.value) {
     return
   }
 
@@ -136,7 +187,7 @@ function readFileAsDataUrl(file: File) {
 async function onFileChange(event: Event) {
   const input = event.target as HTMLInputElement | null
   const file = input?.files?.[0]
-  if (!file || props.disabled) {
+  if (!file || props.disabled || isVoicePresentationMode.value) {
     return
   }
 
@@ -205,13 +256,14 @@ function toggleWakeStandby() {
         :key="suggestion"
         type="button"
         class="suggestion-chip"
+        :disabled="disabled || isVoicePresentationMode"
         @click="useSuggestion(suggestion)"
       >
         {{ suggestion }}
       </button>
     </div>
 
-    <div class="composer-card">
+    <div class="composer-card" :class="composerCardClass">
       <input
         ref="fileInput"
         class="file-input"
@@ -247,30 +299,20 @@ function toggleWakeStandby() {
         <button type="button" class="attachment-remove" @click="clearAttachment">取消</button>
       </div>
 
-      <div v-if="showVoiceFeedback" class="voice-feedback" :class="voiceMode || 'idle'">
-        <div class="voice-feedback-header">
-          <div>
-            <strong>{{ voiceModeLabel }}</strong>
-            <p>{{ voiceStatusText || '语音结果会实时显示在这里' }}</p>
-          </div>
-        </div>
-
-        <p v-if="voiceTranscript" class="voice-transcript">{{ voiceTranscript }}</p>
-        <p v-if="voiceErrorText" class="voice-error">{{ voiceErrorText }}</p>
-      </div>
-
       <textarea
-        v-model="draft"
+        v-model="displayedInputValue"
         class="composer-input"
-        :disabled="disabled"
-        placeholder="尽管说出你的需求吧！"
+        :class="composerInputClass"
+        :disabled="disabled && !isVoicePresentationMode"
+        :readonly="disabled || isVoicePresentationMode"
+        :placeholder="composerPlaceholder"
         rows="1"
         @keydown="onKeydown"
       />
 
       <div class="composer-actions">
         <div class="action-buttons">
-          <button class="upload-button" type="button" :disabled="disabled" @click="triggerFilePicker">+</button>
+          <button class="upload-button" type="button" :disabled="uploadDisabled" @click="triggerFilePicker">+</button>
           <button
             class="voice-button"
             type="button"
@@ -295,14 +337,7 @@ function toggleWakeStandby() {
           >
             {{ standbyActionLabel }}
           </button>
-          <button
-            class="send-button"
-            type="button"
-            :disabled="disabled || attachment?.status === 'uploading' || attachment?.status === 'error'"
-            @click="submit"
-          >
-            发送
-          </button>
+          <button class="send-button" type="button" :disabled="sendDisabled" @click="submit">发送</button>
         </div>
       </div>
     </div>
@@ -340,18 +375,133 @@ function toggleWakeStandby() {
 }
 
 .composer-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
   width: min(100%, 56rem);
   margin: 0 auto;
   padding: 1rem 1rem 0.9rem;
+  overflow: hidden;
   border: 1px solid rgba(47, 93, 80, 0.14);
   border-radius: 1.4rem;
   background: rgba(255, 252, 247, 0.88);
   backdrop-filter: blur(16px);
   box-shadow: 0 18px 36px rgba(33, 47, 43, 0.1);
+  isolation: isolate;
   pointer-events: auto;
+  transition:
+    box-shadow 180ms ease,
+    background 180ms ease,
+    transform 180ms ease;
+}
+
+.composer-card::before,
+.composer-card::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+}
+
+.composer-card::before {
+  inset: 0;
+  padding: 1.3px;
+  border-radius: inherit;
+  background: transparent;
+  opacity: 0;
+  transition:
+    opacity 180ms ease,
+    filter 180ms ease;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+}
+
+.composer-card::after {
+  inset: -42% -12%;
+  border-radius: 50%;
+  opacity: 0;
+  filter: blur(20px);
+  transition: opacity 180ms ease;
+}
+
+.composer-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.composer-card.voice-presenting {
+  background: rgba(255, 253, 248, 0.95);
+}
+
+.composer-card.voice-standby::before {
+  opacity: 0.92;
+  background: linear-gradient(
+    135deg,
+    rgba(248, 181, 102, 0.92),
+    rgba(107, 183, 157, 0.78),
+    rgba(255, 225, 186, 0.82)
+  );
+  filter: saturate(1.08);
+}
+
+.composer-card.voice-standby::after {
+  opacity: 0.24;
+  background:
+    radial-gradient(circle at 18% 28%, rgba(255, 198, 129, 0.18), transparent 24%),
+    radial-gradient(circle at 80% 68%, rgba(102, 180, 154, 0.14), transparent 28%);
+  animation: composer-aura-breathe 4.2s ease-in-out infinite;
+}
+
+.composer-card.voice-standby-paused::before {
+  opacity: 0.78;
+  background: linear-gradient(
+    135deg,
+    rgba(221, 171, 112, 0.72),
+    rgba(123, 170, 154, 0.58),
+    rgba(244, 225, 197, 0.68)
+  );
+}
+
+.composer-card.voice-standby-paused::after {
+  opacity: 0.14;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 207, 148, 0.12), transparent 40%);
+}
+
+.composer-card.voice-active::before {
+  opacity: 1;
+  background: conic-gradient(
+    from 0deg,
+    rgba(255, 220, 151, 0.2),
+    rgba(244, 146, 94, 0.98),
+    rgba(82, 186, 158, 0.96),
+    rgba(255, 217, 135, 0.96),
+    rgba(255, 220, 151, 0.2)
+  );
+  filter: saturate(1.22);
+}
+
+.composer-card.voice-active::after {
+  opacity: 0.28;
+  background: conic-gradient(
+    from 90deg,
+    transparent 0deg,
+    rgba(255, 189, 115, 0.05) 84deg,
+    rgba(255, 189, 115, 0.24) 126deg,
+    rgba(98, 194, 166, 0.22) 188deg,
+    rgba(98, 194, 166, 0.04) 240deg,
+    transparent 360deg
+  );
+  animation: composer-aura-flow 2.4s linear infinite;
+}
+
+.composer-card.voice-checking::after {
+  opacity: 0.18;
 }
 
 .file-input {
@@ -424,63 +574,39 @@ function toggleWakeStandby() {
   cursor: pointer;
 }
 
-.voice-feedback {
-  padding: 0.9rem 1rem;
-  border: 1px solid rgba(47, 93, 80, 0.14);
-  border-radius: 1rem;
-  background: rgba(250, 247, 240, 0.88);
-}
-
-.voice-feedback.recording,
-.voice-feedback.standby,
-.voice-feedback.wakeup-checking,
-.voice-feedback.starting,
-.voice-feedback.stopping {
-  border-color: rgba(47, 93, 80, 0.24);
-  background: rgba(239, 247, 242, 0.94);
-}
-
-.voice-feedback-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-start;
-  gap: 1rem;
-}
-
-.voice-feedback-header strong {
-  display: block;
-  margin-bottom: 0.2rem;
-}
-
-.voice-feedback-header p {
-  margin: 0;
-  color: var(--color-text-soft);
-  font-size: 0.86rem;
-}
-
-.voice-transcript,
-.voice-error {
-  margin: 0.75rem 0 0;
-  line-height: 1.7;
-  white-space: pre-wrap;
-}
-
-.voice-transcript {
-  color: var(--color-text);
-}
-
-.voice-error {
-  color: #b34b39;
-}
-
 .composer-input {
   width: 100%;
-  min-height: 4.75rem;
+  min-height: 5.1rem;
   resize: vertical;
   border: 0;
   outline: none;
   color: var(--color-text);
   background: transparent;
+  line-height: 1.7;
+}
+
+.composer-input::placeholder {
+  color: rgba(92, 107, 101, 0.74);
+}
+
+.composer-input.voice-mode {
+  resize: none;
+}
+
+.composer-input.voice-standby-input::placeholder {
+  color: rgba(63, 109, 95, 0.86);
+}
+
+.composer-input.voice-active-input {
+  color: rgba(30, 47, 42, 0.94);
+}
+
+.composer-input.voice-active-input::placeholder {
+  color: rgba(47, 93, 80, 0.9);
+}
+
+.composer-input.paused::placeholder {
+  color: rgba(96, 113, 106, 0.82);
 }
 
 .composer-actions {
@@ -526,6 +652,7 @@ function toggleWakeStandby() {
 }
 
 .send-button:disabled,
+.upload-button:disabled,
 .voice-button:disabled,
 .composer-input:disabled,
 .suggestion-chip:disabled {
@@ -549,12 +676,31 @@ function toggleWakeStandby() {
     justify-self: flex-end;
   }
 
-  .voice-feedback-header {
-    flex-direction: column;
+  .composer-card.voice-active::after {
+    opacity: 0.22;
   }
 }
 
 @keyframes composer-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes composer-aura-breathe {
+  0%,
+  100% {
+    transform: scale(0.98);
+    opacity: 0.28;
+  }
+
+  50% {
+    transform: scale(1.03);
+    opacity: 0.32;
+  }
+}
+
+@keyframes composer-aura-flow {
   to {
     transform: rotate(360deg);
   }
