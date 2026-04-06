@@ -14,6 +14,7 @@ const emit = defineEmits<{
   saveProfile: [payload: {
     allowAutoUpdate: boolean
     autoStartStepTimer: boolean
+    voiceWakeWordEnabled: boolean
     cookingPreferenceText: string
     tagSelections: TagCatalog
     displayName: string
@@ -50,6 +51,7 @@ const selectedTags = ref<TagCatalog>({
 const cookingPreferenceText = ref('')
 const allowAutoUpdate = ref(true)
 const autoStartStepTimer = ref(false)
+const voiceWakeWordEnabled = ref(false)
 const displayName = ref('')
 const accountEmail = ref('')
 const logoutConfirmOpen = ref(false)
@@ -92,6 +94,10 @@ function toggleAutoStartStepTimer() {
   emit('updateAutoStartStepTimer', autoStartStepTimer.value)
 }
 
+function toggleVoiceWakeWord() {
+  voiceWakeWordEnabled.value = !voiceWakeWordEnabled.value
+}
+
 function openLogoutConfirm() {
   logoutConfirmOpen.value = true
 }
@@ -109,6 +115,7 @@ function saveProfile() {
   emit('saveProfile', {
     allowAutoUpdate: allowAutoUpdate.value,
     autoStartStepTimer: autoStartStepTimer.value,
+    voiceWakeWordEnabled: voiceWakeWordEnabled.value,
     cookingPreferenceText: cookingPreferenceText.value.trim(),
     tagSelections: selectedTags.value,
     displayName: displayName.value.trim(),
@@ -123,6 +130,7 @@ watch(
     cookingPreferenceText.value = profile.cookingPreferenceText
     allowAutoUpdate.value = profile.allowAutoUpdate
     autoStartStepTimer.value = profile.autoStartStepTimer
+    voiceWakeWordEnabled.value = profile.voiceWakeWordEnabled
     displayName.value = profile.name
     accountEmail.value = profile.email
   },
@@ -246,6 +254,22 @@ watch(
                   class="toggle-button"
                   :class="{ active: autoStartStepTimer }"
                   @click="toggleAutoStartStepTimer"
+                >
+                  <span></span>
+                </button>
+              </div>
+
+              <div class="toggle-row">
+                <div>
+                  <strong>开启“小厨小厨”唤醒</strong>
+                  <p>需要你手动进入待命后，才能通过命令词唤醒正式录音。</p>
+                </div>
+
+                <button
+                  type="button"
+                  class="toggle-button"
+                  :class="{ active: voiceWakeWordEnabled }"
+                  @click="toggleVoiceWakeWord"
                 >
                   <span></span>
                 </button>

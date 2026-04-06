@@ -39,6 +39,10 @@ class ProfileService:
         if payload.complete_workspace_onboarding:
             updates["has_completed_workspace_onboarding"] = 1
             updates["profile_completed_at"] = utc_now()
+        if payload.voice_wake_word_enabled is not None:
+            updates["voice_wake_word_enabled"] = int(payload.voice_wake_word_enabled)
+        if payload.voice_wake_word_prompted is not None:
+            updates["voice_wake_word_prompted"] = int(payload.voice_wake_word_prompted)
         if updates:
             updates["updated_at"] = utc_now()
             account_repository.update_user_profile(user_id, updates)

@@ -17,6 +17,8 @@ class UpdateProfileRequest(BaseModel):
     display_name: str | None = None
     email: str | None = None
     complete_workspace_onboarding: bool | None = None
+    voice_wake_word_enabled: bool | None = None
+    voice_wake_word_prompted: bool | None = None
 
 
 ProfileResponse = UserProfileSnapshot

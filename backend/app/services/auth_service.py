@@ -99,6 +99,8 @@ class AuthService:
                 if user.get("profile_completed_at")
                 else None
             ),
+            voice_wake_word_enabled=bool(user.get("voice_wake_word_enabled", 0)),
+            voice_wake_word_prompted=bool(user.get("voice_wake_word_prompted", 0)),
         )
 
     def logout(self, token: str) -> None:

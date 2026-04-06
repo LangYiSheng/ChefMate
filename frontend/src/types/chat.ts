@@ -33,6 +33,8 @@ export interface UserProfileSummary {
   tagSelections: TagCatalog
   hasCompletedWorkspaceOnboarding?: boolean
   profileCompletedAt?: string | null
+  voiceWakeWordEnabled: boolean
+  voiceWakeWordPrompted: boolean
 }
 
 export interface ConversationRecord {

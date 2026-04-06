@@ -37,6 +37,8 @@ class UserProfileSnapshot(BaseModel):
     is_first_workspace_visit: bool = True
     has_completed_workspace_onboarding: bool = False
     profile_completed_at: str | None = None
+    voice_wake_word_enabled: bool = False
+    voice_wake_word_prompted: bool = False
 
 
 class TaskRecipeIngredient(BaseModel):

@@ -12,6 +12,7 @@ import OverlayDialog from './components/OverlayDialog.vue'
 import ProfileSettingsPanel from './components/ProfileSettingsPanel.vue'
 import RecipeLibraryPanel from './components/RecipeLibraryPanel.vue'
 import WorkspaceOnboardingModal from './components/WorkspaceOnboardingModal.vue'
+import { useVoiceInput } from './composables/useVoiceInput'
 import {
   createConversation,
   fetchConversation,
@@ -73,6 +74,8 @@ const profile = ref<UserProfileSummary>({
   email: '',
   allowAutoUpdate: true,
   autoStartStepTimer: false,
+  voiceWakeWordEnabled: false,
+  voiceWakeWordPrompted: false,
   cookingPreferenceText: '',
   tagSelections: {
     flavor: [],
@@ -105,6 +108,8 @@ const loadingWorkspace = ref(false)
 const workspaceInitialized = ref(false)
 const conversationTimers = ref<Record<string, ConversationTimerSlot>>({})
 const pendingTimerReplacement = ref<TimerRequest | null>(null)
+const voicePromptOpen = ref(false)
+const pendingVoiceIntent = ref<'record' | 'standby' | null>(null)
 const timerNotice = ref<{
   conversationId: string
   text: string
@@ -114,6 +119,16 @@ const timerNotice = ref<{
 const messageViewport = useTemplateRef<HTMLDivElement>('messageViewport')
 let countdownTicker: number | null = null
 let timerNoticeTimeout: number | null = null
+
+const voiceInput = useVoiceInput({
+  getToken: getAuthToken,
+  silenceTimeoutMs: 2000,
+  wakeupClipMs: 1500,
+  chunkMs: 200,
+  onFinalText: async (text) => {
+    await sendMessage(text)
+  },
+})
 
 function refreshDraftGreeting() {
   const displayName = profile.value.name?.trim() || '朋友'
@@ -320,6 +335,12 @@ const activeConversationMeta = computed(() => {
 
   return stageText
 })
+const isVoiceFeedbackVisible = computed(() =>
+  Boolean(voiceInput.statusText.value || voiceInput.transcript.value || voiceInput.errorText.value),
+)
+const isVoiceStandbyPanelVisible = computed(
+  () => voiceInput.mode.value === 'standby' || voiceInput.mode.value === 'wakeup-checking',
+)
 
 watch(
   () => route.name,
@@ -431,6 +452,15 @@ onBeforeUnmount(() => {
   }
 })
 
+watch(
+  () => profile.value.voiceWakeWordEnabled,
+  (enabled) => {
+    if (!enabled && voiceInput.isStandbyActive()) {
+      void voiceInput.stopAll('manual_stop')
+    }
+  },
+)
+
 function scrollToBottom(behavior: ScrollBehavior) {
   if (!messageViewport.value) {
     return
@@ -439,6 +469,12 @@ function scrollToBottom(behavior: ScrollBehavior) {
   messageViewport.value.scrollTo({
     top: messageViewport.value.scrollHeight,
     behavior,
+  })
+}
+
+function scheduleScrollToBottom(behavior: ScrollBehavior = 'smooth') {
+  void nextTick(() => {
+    scrollToBottom(behavior)
   })
 }
 
@@ -650,6 +686,7 @@ async function completeWorkspaceOnboarding(payload: {
 async function saveProfileSettings(payload: {
   allowAutoUpdate: boolean
   autoStartStepTimer: boolean
+  voiceWakeWordEnabled: boolean
   cookingPreferenceText: string
   tagSelections: TagCatalog
   displayName: string
@@ -663,6 +700,8 @@ async function saveProfileSettings(payload: {
   const updated = await updateProfile(token, {
     allow_auto_update: payload.allowAutoUpdate,
     auto_start_step_timer: payload.autoStartStepTimer,
+    voice_wake_word_enabled: payload.voiceWakeWordEnabled,
+    voice_wake_word_prompted: true,
     cooking_preference_text: payload.cookingPreferenceText,
     tag_selections: normalizedTagSelections,
     display_name: payload.displayName,
@@ -678,6 +717,7 @@ async function saveProfileSettings(payload: {
 }
 
 async function logout() {
+  await voiceInput.stopAll('manual_stop')
   const token = getAuthToken()
   try {
     if (token) {
@@ -875,6 +915,14 @@ async function sendMessage(payload: string | { prompt?: string; attachments?: Ch
     return
   }
 
+  if (
+    voiceInput.mode.value === 'recording' ||
+    voiceInput.mode.value === 'starting' ||
+    voiceInput.mode.value === 'stopping'
+  ) {
+    await voiceInput.stopActive('manual_stop')
+  }
+
   const conversation = await ensureConversationForSend()
   if (!conversation) {
     return
@@ -910,6 +958,7 @@ async function sendMessage(payload: string | { prompt?: string; attachments?: Ch
 
   const placeholder = createStreamingAssistantMessage()
   targetConversation.messages.push(placeholder)
+  scheduleScrollToBottom('smooth')
   typingConversationId.value = targetConversation.id
   streamingStatusText.value = '正在理解你的需求...'
 
@@ -936,6 +985,7 @@ async function sendMessage(payload: string | { prompt?: string; attachments?: Ch
 
         if (event === 'token') {
           placeholder.content += data.text || ''
+          scheduleScrollToBottom('auto')
           return
         }
 
@@ -954,6 +1004,7 @@ async function sendMessage(payload: string | { prompt?: string; attachments?: Ch
           normalizeConversationCards([targetConversation])
           upsertConversation(targetConversation, true)
           loadedConversationIds.value[targetConversation.id] = true
+          scheduleScrollToBottom('smooth')
           return
         }
 
@@ -966,12 +1017,100 @@ async function sendMessage(payload: string | { prompt?: string; attachments?: Ch
     if (synced) {
       targetConversation = conversations.value.find((item) => item.id === synced.id) ?? synced
     }
+    scheduleScrollToBottom('smooth')
   } catch (error) {
     placeholder.content = error instanceof Error ? error.message : '消息发送失败，请稍后重试。'
+    scheduleScrollToBottom('smooth')
   } finally {
     typingConversationId.value = null
     streamingStatusText.value = ''
+    scheduleScrollToBottom('smooth')
   }
+}
+
+async function persistVoiceWakeWordPreference(enabled: boolean) {
+  const token = getAuthToken()
+  if (!token) {
+    return
+  }
+
+  const updated = await updateProfile(token, {
+    voice_wake_word_enabled: enabled,
+    voice_wake_word_prompted: true,
+  })
+  profile.value = updated
+}
+
+async function resolveVoicePrompt(enabled: boolean) {
+  voicePromptOpen.value = false
+  const pendingIntent = pendingVoiceIntent.value
+  pendingVoiceIntent.value = null
+
+  try {
+    await persistVoiceWakeWordPreference(enabled)
+  } catch (error) {
+    voiceInput.setExternalError(error instanceof Error ? error.message : '语音设置保存失败，请稍后再试。')
+    return
+  }
+
+  if (pendingIntent === 'record') {
+    voiceInput.clearVoiceFeedback()
+    await voiceInput.startDirectRecording()
+    return
+  }
+
+  if (pendingIntent === 'standby' && enabled) {
+    voiceInput.clearVoiceFeedback()
+    await voiceInput.startStandby()
+  }
+}
+
+function requestVoiceRecord() {
+  if (isComposerDisabled.value) {
+    return
+  }
+
+  if (
+    voiceInput.mode.value === 'recording' ||
+    voiceInput.mode.value === 'starting' ||
+    voiceInput.mode.value === 'stopping'
+  ) {
+    void voiceInput.stopActive('manual_stop')
+    return
+  }
+
+  if (!profile.value.voiceWakeWordPrompted) {
+    pendingVoiceIntent.value = 'record'
+    voicePromptOpen.value = true
+    return
+  }
+
+  voiceInput.clearVoiceFeedback()
+  void voiceInput.startDirectRecording()
+}
+
+function toggleVoiceStandby() {
+  if (isComposerDisabled.value) {
+    return
+  }
+
+  if (voiceInput.mode.value === 'standby' || voiceInput.mode.value === 'wakeup-checking') {
+    void voiceInput.stopAll('manual_stop')
+    return
+  }
+
+  if (!profile.value.voiceWakeWordPrompted) {
+    pendingVoiceIntent.value = 'standby'
+    voicePromptOpen.value = true
+    return
+  }
+
+  if (!profile.value.voiceWakeWordEnabled) {
+    return
+  }
+
+  voiceInput.clearVoiceFeedback()
+  void voiceInput.startStandby()
 }
 
 function sendCardAction(action: CardActionEvent) {
@@ -1192,14 +1331,29 @@ function showRecipeLibrary() {
                   </div>
                 </div>
 
-                <div class="message-bottom-spacer" aria-hidden="true"></div>
+                <div
+                  class="message-bottom-spacer"
+                  :class="{
+                    expanded: isVoiceFeedbackVisible,
+                    'standby-expanded': isVoiceStandbyPanelVisible,
+                  }"
+                  aria-hidden="true"
+                ></div>
               </div>
             </section>
 
             <ComposerPanel
               :disabled="isComposerDisabled"
               :suggestions="activeSuggestions"
+              :voice-supported="voiceInput.isSupported.value"
+              :voice-mode="voiceInput.mode.value"
+              :voice-status-text="voiceInput.statusText.value"
+              :voice-transcript="voiceInput.transcript.value"
+              :voice-error-text="voiceInput.errorText.value"
+              :wake-word-enabled="profile.voiceWakeWordEnabled"
               @send="sendMessage"
+              @request-voice-record="requestVoiceRecord"
+              @toggle-wake-standby="toggleVoiceStandby"
             />
           </section>
         </template>
@@ -1238,6 +1392,16 @@ function showRecipeLibrary() {
         cancel-label="再想想"
         @cancel="cancelTimerReplacement"
         @confirm="confirmTimerReplacement"
+      />
+
+      <ActionModal
+        :is-open="voicePromptOpen"
+        title="要不要开启“小厨小厨”唤醒？"
+        message="开启后，你可以先手动进入待命，再通过“小厨小厨”唤醒正式录音。这个设置之后也能在个人设置里随时修改。"
+        confirm-label="开启唤醒"
+        cancel-label="暂不开启"
+        @cancel="resolveVoicePrompt(false)"
+        @confirm="resolveVoicePrompt(true)"
       />
 
       <WorkspaceOnboardingModal
@@ -1307,6 +1471,15 @@ function showRecipeLibrary() {
 
 .message-bottom-spacer {
   height: 13.5rem;
+  transition: height 180ms ease;
+}
+
+.message-bottom-spacer.expanded {
+  height: 18rem;
+}
+
+.message-bottom-spacer.standby-expanded {
+  height: 21rem;
 }
 
 .screen-fade-enter-active,
@@ -1466,6 +1639,14 @@ function showRecipeLibrary() {
 
   .message-bottom-spacer {
     height: 14.5rem;
+  }
+
+  .message-bottom-spacer.expanded {
+    height: 20rem;
+  }
+
+  .message-bottom-spacer.standby-expanded {
+    height: 23.5rem;
   }
 }
 </style>

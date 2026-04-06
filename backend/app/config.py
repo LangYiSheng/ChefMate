@@ -51,6 +51,15 @@ class Settings(BaseSettings):
 
     recommendation_sample_size: int = 3
 
+    voice_volcengine_ws_url: str = "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel"
+    voice_volcengine_app_key: str = ""
+    voice_volcengine_access_key: str = ""
+    voice_volcengine_resource_id: str = "volc.bigasr.sauc.duration"
+    voice_sample_rate_hz: int = 16000
+    voice_chunk_ms: int = 200
+    voice_wakeup_clip_ms: int = 1500
+    voice_silence_timeout_ms: int = 2000
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_prefix="CHEFMATE_",

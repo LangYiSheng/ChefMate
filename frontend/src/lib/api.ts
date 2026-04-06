@@ -29,15 +29,22 @@ export interface StreamEventPayload {
   data: any
 }
 
+export interface VoiceWakeupResponse {
+  text: string
+  matched: boolean
+  matchedKeyword?: string | null
+  remainderText: string
+}
+
 interface ApiRequestOptions extends RequestInit {
   token?: string
 }
 
-function getApiBaseUrl() {
+export function getApiBaseUrl() {
   return (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/$/, '')
 }
 
-function getApiOrigin() {
+export function getApiOrigin() {
   return getApiBaseUrl().replace(/\/api$/, '')
 }
 
@@ -272,6 +279,8 @@ export function normalizeProfile(record: any): UserProfileSummary {
     tagSelections: normalizeTagCatalog(record.tag_selections || {}),
     hasCompletedWorkspaceOnboarding: Boolean(record.has_completed_workspace_onboarding),
     profileCompletedAt: record.profile_completed_at || null,
+    voiceWakeWordEnabled: Boolean(record.voice_wake_word_enabled),
+    voiceWakeWordPrompted: Boolean(record.voice_wake_word_prompted),
   }
 }
 
@@ -347,6 +356,24 @@ export async function uploadImage(token: string, file: File) {
     body: formData,
   })
   return normalizeAttachment(response)
+}
+
+export async function checkVoiceWakeup(token: string, audioBase64: string, sampleRate = 16000) {
+  const response = await apiFetch<any>('/voice/wakeup/check', {
+    method: 'POST',
+    token,
+    body: JSON.stringify({
+      audio_base64: audioBase64,
+      sample_rate: sampleRate,
+      format: 'pcm_s16le',
+    }),
+  })
+  return {
+    text: String(response.text || ''),
+    matched: Boolean(response.matched),
+    matchedKeyword: response.matched_keyword || null,
+    remainderText: String(response.remainder_text || ''),
+  } satisfies VoiceWakeupResponse
 }
 
 export async function fetchConversations(token: string) {

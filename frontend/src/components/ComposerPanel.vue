@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 import { uploadImage } from '../lib/api'
 import { getAuthToken } from '../state/auth'
@@ -8,15 +8,61 @@ import type { ChatAttachment } from '../types/chat'
 const props = defineProps<{
   disabled?: boolean
   suggestions: string[]
+  voiceSupported?: boolean
+  voiceMode?: 'idle' | 'starting' | 'recording' | 'stopping' | 'standby' | 'wakeup-checking'
+  voiceStatusText?: string
+  voiceTranscript?: string
+  voiceErrorText?: string
+  wakeWordEnabled?: boolean
 }>()
 
 const emit = defineEmits<{
   send: [payload: { prompt: string; attachments: ChatAttachment[] }]
+  requestVoiceRecord: []
+  toggleWakeStandby: []
 }>()
 
 const draft = ref('')
 const attachment = ref<(ChatAttachment & { status: 'uploading' | 'ready' | 'error' }) | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
+const voiceModeLabel = computed(() => {
+  if (props.voiceMode === 'recording') {
+    return '录音中'
+  }
+  if (props.voiceMode === 'stopping') {
+    return '结束中'
+  }
+  if (props.voiceMode === 'standby') {
+    return '待命中'
+  }
+  if (props.voiceMode === 'wakeup-checking') {
+    return '唤醒检测'
+  }
+  if (props.voiceMode === 'starting') {
+    return '准备中'
+  }
+  return '语音输入'
+})
+const voiceActionLabel = computed(() =>
+  props.voiceMode === 'recording' || props.voiceMode === 'stopping' ? '停止' : '语音',
+)
+const standbyActionLabel = computed(() =>
+  props.voiceMode === 'standby' || props.voiceMode === 'wakeup-checking' ? '结束待命' : '待命',
+)
+const voiceBlockedByAttachment = computed(() => attachment.value !== null)
+const voiceDisabled = computed(
+  () => props.disabled || voiceBlockedByAttachment.value || props.voiceSupported === false,
+)
+const standbyDisabled = computed(
+  () =>
+    voiceDisabled.value ||
+    props.voiceMode === 'recording' ||
+    props.voiceMode === 'starting' ||
+    props.voiceMode === 'stopping',
+)
+const showVoiceFeedback = computed(
+  () => Boolean(props.voiceStatusText || props.voiceTranscript || props.voiceErrorText),
+)
 
 function submit() {
   const content = draft.value.trim()
@@ -135,6 +181,20 @@ async function onFileChange(event: Event) {
     }
   }
 }
+
+function requestVoiceRecord() {
+  if (voiceDisabled.value) {
+    return
+  }
+  emit('requestVoiceRecord')
+}
+
+function toggleWakeStandby() {
+  if (standbyDisabled.value) {
+    return
+  }
+  emit('toggleWakeStandby')
+}
 </script>
 
 <template>
@@ -187,6 +247,18 @@ async function onFileChange(event: Event) {
         <button type="button" class="attachment-remove" @click="clearAttachment">取消</button>
       </div>
 
+      <div v-if="showVoiceFeedback" class="voice-feedback" :class="voiceMode || 'idle'">
+        <div class="voice-feedback-header">
+          <div>
+            <strong>{{ voiceModeLabel }}</strong>
+            <p>{{ voiceStatusText || '语音结果会实时显示在这里' }}</p>
+          </div>
+        </div>
+
+        <p v-if="voiceTranscript" class="voice-transcript">{{ voiceTranscript }}</p>
+        <p v-if="voiceErrorText" class="voice-error">{{ voiceErrorText }}</p>
+      </div>
+
       <textarea
         v-model="draft"
         class="composer-input"
@@ -199,6 +271,30 @@ async function onFileChange(event: Event) {
       <div class="composer-actions">
         <div class="action-buttons">
           <button class="upload-button" type="button" :disabled="disabled" @click="triggerFilePicker">+</button>
+          <button
+            class="voice-button"
+            type="button"
+            :disabled="voiceDisabled"
+            :title="
+              voiceBlockedByAttachment
+                ? '当前有未发送的图片附件，请先发送或取消后再使用语音。'
+                : voiceSupported === false
+                  ? '当前浏览器不支持语音输入。'
+                  : ''
+            "
+            @click="requestVoiceRecord"
+          >
+            {{ voiceActionLabel }}
+          </button>
+          <button
+            v-if="wakeWordEnabled"
+            class="voice-button standby-button"
+            type="button"
+            :disabled="standbyDisabled"
+            @click="toggleWakeStandby"
+          >
+            {{ standbyActionLabel }}
+          </button>
           <button
             class="send-button"
             type="button"
@@ -328,6 +424,55 @@ async function onFileChange(event: Event) {
   cursor: pointer;
 }
 
+.voice-feedback {
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(47, 93, 80, 0.14);
+  border-radius: 1rem;
+  background: rgba(250, 247, 240, 0.88);
+}
+
+.voice-feedback.recording,
+.voice-feedback.standby,
+.voice-feedback.wakeup-checking,
+.voice-feedback.starting,
+.voice-feedback.stopping {
+  border-color: rgba(47, 93, 80, 0.24);
+  background: rgba(239, 247, 242, 0.94);
+}
+
+.voice-feedback-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 1rem;
+}
+
+.voice-feedback-header strong {
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.voice-feedback-header p {
+  margin: 0;
+  color: var(--color-text-soft);
+  font-size: 0.86rem;
+}
+
+.voice-transcript,
+.voice-error {
+  margin: 0.75rem 0 0;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.voice-transcript {
+  color: var(--color-text);
+}
+
+.voice-error {
+  color: #b34b39;
+}
+
 .composer-input {
   width: 100%;
   min-height: 4.75rem;
@@ -349,6 +494,7 @@ async function onFileChange(event: Event) {
 }
 
 .upload-button,
+.voice-button,
 .send-button {
   min-height: 2.7rem;
   padding: 0 1rem;
@@ -364,12 +510,23 @@ async function onFileChange(event: Event) {
   font-size: 1.2rem;
 }
 
+.voice-button {
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--color-accent);
+  border: 1px solid rgba(47, 93, 80, 0.12);
+}
+
+.standby-button {
+  background: rgba(242, 247, 244, 0.96);
+}
+
 .send-button {
   background: linear-gradient(135deg, rgba(47, 93, 80, 0.96), rgba(32, 57, 49, 0.96));
   color: #fef7ef;
 }
 
 .send-button:disabled,
+.voice-button:disabled,
 .composer-input:disabled,
 .suggestion-chip:disabled {
   cursor: not-allowed;
@@ -390,6 +547,10 @@ async function onFileChange(event: Event) {
   .attachment-remove {
     grid-column: 1 / -1;
     justify-self: flex-end;
+  }
+
+  .voice-feedback-header {
+    flex-direction: column;
   }
 }
 
