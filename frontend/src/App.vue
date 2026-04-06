@@ -657,6 +657,7 @@ async function completeWorkspaceOnboarding(payload: {
   tagSelections: UserProfileSummary['tagSelections']
   allowAutoUpdate: boolean
   autoStartStepTimer: boolean
+  voiceWakeWordEnabled: boolean
 }) {
   const token = getAuthToken()
   if (!token) {
@@ -670,6 +671,8 @@ async function completeWorkspaceOnboarding(payload: {
     tag_selections: normalizedTagSelections,
     allow_auto_update: payload.allowAutoUpdate,
     auto_start_step_timer: payload.autoStartStepTimer,
+    voice_wake_word_enabled: payload.voiceWakeWordEnabled,
+    voice_wake_word_prompted: true,
     complete_workspace_onboarding: true,
   })
   profile.value = updated

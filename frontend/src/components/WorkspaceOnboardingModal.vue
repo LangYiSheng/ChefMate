@@ -9,6 +9,7 @@ interface WorkspaceOnboardingPayload {
   tagSelections: TagCatalog
   allowAutoUpdate: boolean
   autoStartStepTimer: boolean
+  voiceWakeWordEnabled: boolean
 }
 
 const props = defineProps<{
@@ -26,6 +27,7 @@ const steps = [
   '完善个人信息',
   '设置偏好档案',
   '调整记忆设置',
+  '认识“小厨小厨”',
   '开始第一段对话',
 ] as const
 
@@ -43,6 +45,7 @@ const displayName = ref('')
 const cookingPreferenceText = ref('')
 const allowAutoUpdate = ref(true)
 const autoStartStepTimer = ref(false)
+const voiceWakeWordEnabled = ref(false)
 const selectedTags = ref<TagCatalog>({
   flavor: [],
   method: [],
@@ -113,6 +116,7 @@ function completeOnboarding() {
     tagSelections: selectedTags.value,
     allowAutoUpdate: allowAutoUpdate.value,
     autoStartStepTimer: autoStartStepTimer.value,
+    voiceWakeWordEnabled: voiceWakeWordEnabled.value,
   })
 }
 
@@ -123,6 +127,7 @@ watch(
     cookingPreferenceText.value = profile.cookingPreferenceText
     allowAutoUpdate.value = profile.allowAutoUpdate
     autoStartStepTimer.value = profile.autoStartStepTimer
+    voiceWakeWordEnabled.value = profile.voiceWakeWordEnabled
     selectedTags.value = normalizeSelections(profile.tagSelections)
   },
   { immediate: true, deep: true },
@@ -173,7 +178,12 @@ watch(
                 <template v-else-if="currentStep === 2">
                   <p class="step-eyebrow">偏好档案</p>
                   <h3>选择一些长期记忆标签，也可以简单写下你的做饭习惯</h3>
-                  <p class="step-copy">这一步可以跳过，后面也能随时回来补充。</p>
+                  <p class="step-copy">这里可以先跳过。后面直接在对话里告诉 ChefMate 你的口味、忌口和做饭节奏，它也会自动帮你补到档案里。</p>
+
+                  <section class="guide-note">
+                    <strong>先随便说，也完全没问题</strong>
+                    <p>比如“我最近想少油一点”“工作日晚饭想快手一些”，ChefMate 会在后续对话里慢慢记住这些偏好。</p>
+                  </section>
 
                   <div class="tag-groups hover-scroll">
                     <section v-for="category in categoryMeta" :key="category.key" class="tag-group">
@@ -251,6 +261,38 @@ watch(
                       class="toggle-button"
                       :class="{ active: autoStartStepTimer }"
                       @click="autoStartStepTimer = !autoStartStepTimer"
+                    >
+                      <span></span>
+                    </button>
+                  </div>
+                </template>
+
+                <template v-else-if="currentStep === 4">
+                  <p class="step-eyebrow">语音唤醒</p>
+                  <h3>想试试对着 ChefMate 说一句“小厨小厨”吗？</h3>
+                  <p class="step-copy">
+                    开启后，你可以先手动进入待命，再用“小厨小厨”唤醒正式语音输入。这个功能默认关闭，也可以之后随时在设置里改。
+                  </p>
+
+                  <section class="voice-intro-card">
+                    <div class="voice-intro-badge">小厨小厨</div>
+                    <div class="voice-intro-copy">
+                      <strong>一句话唤醒，更适合边做饭边说需求</strong>
+                      <p>想让 ChefMate 推荐菜、记住偏好、或者继续当前烹饪流程时，不用腾手打字，直接说出来就行。</p>
+                    </div>
+                  </section>
+
+                  <div class="toggle-card feature-toggle-card">
+                    <div>
+                      <strong>首次使用时就开启“小厨小厨”唤醒</strong>
+                      <p>开启后仍然需要你先手动进入待命，避免平时一直占着麦克风。</p>
+                    </div>
+
+                    <button
+                      type="button"
+                      class="toggle-button"
+                      :class="{ active: voiceWakeWordEnabled }"
+                      @click="voiceWakeWordEnabled = !voiceWakeWordEnabled"
                     >
                       <span></span>
                     </button>
@@ -428,6 +470,63 @@ watch(
 .toggle-card p,
 .tag-head span {
   color: var(--color-text-soft);
+}
+
+.guide-note,
+.voice-intro-card {
+  width: min(100%, 38rem);
+  margin-top: 1.3rem;
+  border: 1px solid rgba(47, 93, 80, 0.12);
+  border-radius: 1.2rem;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.guide-note {
+  padding: 1rem 1.1rem;
+}
+
+.guide-note strong,
+.voice-intro-copy strong {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.guide-note p,
+.voice-intro-copy p {
+  margin: 0;
+  color: var(--color-text-soft);
+  line-height: 1.7;
+}
+
+.voice-intro-card {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  padding: 1.1rem 1.15rem;
+  background:
+    radial-gradient(circle at top left, rgba(250, 214, 166, 0.34), transparent 13rem),
+    rgba(255, 255, 255, 0.74);
+}
+
+.voice-intro-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 6.25rem;
+  min-height: 6.25rem;
+  padding: 0.9rem;
+  border-radius: 1.6rem;
+  background: linear-gradient(145deg, rgba(255, 236, 210, 0.95), rgba(241, 248, 244, 0.95));
+  color: var(--color-accent);
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  box-shadow: inset 0 0 0 1px rgba(47, 93, 80, 0.08);
+}
+
+.feature-toggle-card {
+  width: min(100%, 38rem);
 }
 
 .tag-groups {
@@ -668,6 +767,18 @@ watch(
     flex-direction: column;
     gap: 0.75rem;
     padding: 0.95rem 1rem;
+  }
+
+  .voice-intro-card {
+    grid-template-columns: 1fr;
+  }
+
+  .voice-intro-badge {
+    min-width: 0;
+    min-height: 0;
+    width: fit-content;
+    padding: 0.7rem 0.95rem;
+    border-radius: 999px;
   }
 }
 
