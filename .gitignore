@@ -24,3 +24,5 @@ ml/vision/weights/
 prompt
 
 backend/storage/
+
+.codex
