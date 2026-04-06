@@ -23,8 +23,11 @@ const emit = defineEmits<{
   toggleWakeStandby: []
 }>()
 
+type ComposerAttachment = ChatAttachment & { status: 'uploading' | 'ready' | 'error' }
+type ReadyComposerAttachment = ChatAttachment & { status: 'ready' }
+
 const draft = ref('')
-const attachment = ref<(ChatAttachment & { status: 'uploading' | 'ready' | 'error' }) | null>(null)
+const attachment = ref<ComposerAttachment | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 
 const isVoicePresentationMode = computed(() => (props.voiceMode ?? 'idle') !== 'idle')
@@ -122,9 +125,10 @@ function submit() {
     return
   }
 
+  const nextAttachment = toReadyAttachment(attachment.value)
   emit('send', {
     prompt: content,
-    attachments: attachment.value ? [normalizeAttachment(attachment.value)] : [],
+    attachments: nextAttachment ? [normalizeAttachment(nextAttachment)] : [],
   })
   draft.value = ''
   attachment.value = null
@@ -149,7 +153,17 @@ function onKeydown(event: KeyboardEvent) {
   }
 }
 
-function normalizeAttachment(item: ChatAttachment & { status: 'uploading' | 'ready' }): ChatAttachment {
+function toReadyAttachment(item: ComposerAttachment | null): ReadyComposerAttachment | null {
+  if (item?.status !== 'ready') {
+    return null
+  }
+  return {
+    ...item,
+    status: 'ready',
+  }
+}
+
+function normalizeAttachment(item: ReadyComposerAttachment): ChatAttachment {
   return {
     id: item.id,
     kind: item.kind,

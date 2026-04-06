@@ -181,13 +181,23 @@ function upsertConversation(conversation: ConversationRecord, replaceMessages = 
     conversations.value.unshift(conversation)
   } else {
     const current = conversations.value[index]
-    conversations.value[index] = normalizeConversationCards([
+    if (!current) {
+      conversations.value.unshift(conversation)
+      return
+    }
+
+    const [nextConversation] = normalizeConversationCards([
       {
         ...current,
         ...conversation,
         messages: replaceMessages ? conversation.messages : current.messages,
       },
-    ])[0]
+    ])
+    if (!nextConversation) {
+      return
+    }
+
+    conversations.value[index] = nextConversation
   }
 }
 
@@ -774,7 +784,7 @@ function normalizeConversationCards(conversationList: ConversationRecord[]) {
 
     for (let index = conversation.messages.length - 1; index >= 0; index -= 1) {
       const message = conversation.messages[index]
-      if (!message.cards?.length) {
+      if (!message || !message.cards?.length) {
         continue
       }
 

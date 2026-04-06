@@ -69,10 +69,10 @@ class PcmResampler {
       let sum = 0
       let count = 0
       for (let offset = start; offset < end; offset += 1) {
-        sum += merged[offset]
+        sum += merged[offset] ?? 0
         count += 1
       }
-      const sample = count > 0 ? sum / count : merged[start] || 0
+      const sample = count > 0 ? sum / count : (merged[start] ?? 0)
       const clamped = Math.max(-1, Math.min(1, sample))
       output[index] = clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff
     }
@@ -103,6 +103,9 @@ class Int16ChunkAccumulator {
 
       while (offset < this.samplesPerChunk) {
         const head = this.chunks[0]
+        if (!head) {
+          throw new Error('PCM chunk accumulator state is inconsistent.')
+        }
         const remaining = this.samplesPerChunk - offset
         if (head.length <= remaining) {
           payload.set(head, offset)
@@ -169,7 +172,8 @@ function computeRms(chunk: Float32Array) {
   }
   let sum = 0
   for (let index = 0; index < chunk.length; index += 1) {
-    sum += chunk[index] * chunk[index]
+    const sample = chunk[index] ?? 0
+    sum += sample * sample
   }
   return Math.sqrt(sum / chunk.length)
 }
