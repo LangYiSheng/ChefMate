@@ -1,6 +1,6 @@
 import { computed, onBeforeUnmount, ref } from 'vue'
 
-import { checkVoiceWakeup, getApiOrigin } from '../lib/api'
+import { checkVoiceWakeup, getApiBaseUrl } from '../lib/api'
 
 type VoiceMode = 'idle' | 'starting' | 'recording' | 'stopping' | 'standby' | 'wakeup-checking'
 type StopReason = 'manual_stop' | 'silence_timeout'
@@ -19,7 +19,7 @@ interface VoiceSocketEvent {
 }
 
 const TARGET_SAMPLE_RATE = 16000
-const PCM_WORKLET_PATH = '/audio/pcm-capture-worklet.js'
+const PCM_WORKLET_PATH = `${import.meta.env.BASE_URL}audio/pcm-capture-worklet.js`
 const RMS_THRESHOLD = 0.015
 const WAKEUP_MIN_CAPTURE_MS = 350
 const WAKEUP_SILENCE_FLUSH_MS = 450
@@ -179,9 +179,11 @@ function computeRms(chunk: Float32Array) {
 }
 
 function buildVoiceSocketUrl() {
-  const origin = getApiOrigin()
-  const protocol = origin.startsWith('https://') ? 'wss://' : 'ws://'
-  return `${origin.replace(/^https?:\/\//, protocol)}/api/voice/stream`
+  const baseOrigin =
+    typeof window !== 'undefined' ? window.location.origin : 'http://127.0.0.1:8000'
+  const apiUrl = new URL(getApiBaseUrl(), baseOrigin)
+  const socketProtocol = apiUrl.protocol === 'https:' ? 'wss:' : 'ws:'
+  return `${socketProtocol}//${apiUrl.host}${apiUrl.pathname}/voice/stream`
 }
 
 function needsBoundarySpace(left: string, right: string) {

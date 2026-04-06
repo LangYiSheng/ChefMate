@@ -45,7 +45,16 @@ export function getApiBaseUrl() {
 }
 
 export function getApiOrigin() {
-  return getApiBaseUrl().replace(/\/api$/, '')
+  const apiBaseUrl = getApiBaseUrl()
+  if (/^https?:\/\//.test(apiBaseUrl)) {
+    return apiBaseUrl.replace(/\/api$/, '')
+  }
+
+  if (typeof window !== 'undefined') {
+    return window.location.origin
+  }
+
+  return ''
 }
 
 function createHeaders(options: ApiRequestOptions) {
