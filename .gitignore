@@ -26,3 +26,5 @@ prompt
 backend/storage/
 
 .codex
+
+frontendbuild/
