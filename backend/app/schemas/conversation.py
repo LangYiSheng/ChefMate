@@ -13,6 +13,15 @@ class ConversationCreateRequest(BaseModel):
     recipe_id: int | None = None
 
 
+class ConversationBulkDeleteRequest(BaseModel):
+    conversation_ids: list[str] = Field(default_factory=list)
+
+
+class ConversationBulkDeleteResponse(BaseModel):
+    deleted_ids: list[str] = Field(default_factory=list)
+    deleted_count: int = 0
+
+
 class UploadedAttachmentInput(BaseModel):
     kind: AttachmentKind
     file_id: str | None = None

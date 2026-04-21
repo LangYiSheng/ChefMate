@@ -22,6 +22,8 @@ from app.domain.models import (
 from app.repositories.conversation_repository import conversation_repository
 from app.repositories.file_repository import file_repository
 from app.schemas.conversation import (
+    ConversationBulkDeleteRequest,
+    ConversationBulkDeleteResponse,
     ConversationCreateRequest,
     ConversationCreateResponse,
     SendMessageRequest,
@@ -44,6 +46,30 @@ class ConversationService:
 
     def list_conversations(self, user: UserProfileSnapshot) -> list[ConversationSummary]:
         return [self._row_to_summary(item) for item in conversation_repository.list_conversations(user_id=user.id)]
+
+    def delete_conversations(
+        self,
+        *,
+        user: UserProfileSnapshot,
+        payload: ConversationBulkDeleteRequest,
+    ) -> ConversationBulkDeleteResponse:
+        seen_ids: set[str] = set()
+        conversation_ids = []
+        for conversation_id in payload.conversation_ids:
+            normalized_id = conversation_id.strip()
+            if not normalized_id or normalized_id in seen_ids:
+                continue
+            seen_ids.add(normalized_id)
+            conversation_ids.append(normalized_id)
+
+        deleted_ids = conversation_repository.delete_conversations(
+            user_id=user.id,
+            conversation_ids=conversation_ids,
+        )
+        return ConversationBulkDeleteResponse(
+            deleted_ids=deleted_ids,
+            deleted_count=len(deleted_ids),
+        )
 
     def get_conversation_detail(self, *, user: UserProfileSnapshot, conversation_id: str) -> ConversationDetail:
         conversation = conversation_repository.get_conversation(user_id=user.id, conversation_id=conversation_id)

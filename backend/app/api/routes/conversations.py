@@ -10,6 +10,8 @@ from app.api.dependencies import get_current_user_profile
 from app.domain.models import ConversationSummary
 from app.domain.models import UserProfileSnapshot
 from app.schemas.conversation import (
+    ConversationBulkDeleteRequest,
+    ConversationBulkDeleteResponse,
     ConversationCreateRequest,
     ConversationCreateResponse,
     SendMessageRequest,
@@ -24,6 +26,14 @@ logger = logging.getLogger(__name__)
 @router.get("", response_model=list[ConversationSummary])
 def list_conversations(profile: UserProfileSnapshot = Depends(get_current_user_profile)):
     return conversation_service.list_conversations(profile)
+
+
+@router.delete("", response_model=ConversationBulkDeleteResponse)
+def delete_conversations(
+    payload: ConversationBulkDeleteRequest,
+    profile: UserProfileSnapshot = Depends(get_current_user_profile),
+) -> ConversationBulkDeleteResponse:
+    return conversation_service.delete_conversations(user=profile, payload=payload)
 
 
 @router.get("/{conversation_id}")

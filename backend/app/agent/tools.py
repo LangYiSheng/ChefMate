@@ -1,21 +1,42 @@
 import random
-from typing import Any
 
 from langchain_core.tools import BaseTool, tool
 from langgraph.prebuilt.tool_node import ToolRuntime
-from pydantic import BaseModel, Field
 import logging
 
+from app.agent.recipe_tool_helpers import (
+    build_planning_patch_payload,
+    build_task_patch_payload,
+    format_recipe_candidate,
+    has_ingredient_status_updates,
+    has_step_status_updates,
+    rank_candidate_ids,
+    search_candidate_scores,
+    set_recipe_recommendation_card,
+    validate_recipe_tag_filters,
+)
 from app.agent.runtime import AgentTurnContext
+from app.agent.tool_errors import handle_agent_tool_error
+from app.agent.tool_schemas import (
+    GeneratedRecipeInput,
+    ImageRecognitionInput,
+    IngredientPatchInput,
+    PlanningRecipePatchInput,
+    RecipeDetailDisplayInput,
+    RecipeSearchInput,
+    RecommendRecipesInput,
+    StepPatchInput,
+    TaskRecipePatchInput,
+    TaskRecipeUpsertInput,
+    UserMemoryUpdateInput,
+)
 from app.domain.cards import (
     build_cooking_guide_card,
     build_pantry_status_card,
     build_recipe_detail_card,
-    build_recipe_recommendations_card,
 )
 from app.domain.enums import ConversationStage
 from app.domain.models import TagSelections
-from app.repositories.conversation_repository import conversation_repository
 from app.services.profile_service import profile_service
 from app.services.recipe_catalog_service import recipe_catalog_service
 from app.services.task_service import task_service
@@ -24,55 +45,19 @@ from app.schemas.profile import UpdateProfileRequest
 from app.utils.recipe_snapshot import (
     apply_client_card_state_overlay,
     build_task_recipe_snapshot_from_catalog,
-    build_task_recipe_snapshot_from_generated,
-    flatten_recipe_tags,
 )
 
 logger = logging.getLogger(__name__)
-
-
-def handle_agent_tool_error(exc: Exception) -> str:
-    logger.exception("[agent-tool] recoverable error: %s", exc)
-    detail = str(exc).strip() or exc.__class__.__name__
-    return (
-        f"工具调用失败：{detail}\n"
-        "请根据这条错误调整参数、阶段或调用顺序后再试。"
-    )
-
-
-def build_task_patch_payload(
-    *,
-    ingredients: list["IngredientPatchInput"] | None = None,
-    steps: list["StepPatchInput"] | None = None,
-) -> dict[str, Any]:
-    payload: dict[str, Any] = {}
-    if ingredients:
-        payload["ingredients"] = [
-            item.model_dump(mode="json", exclude_none=True, exclude_unset=True)
-            for item in ingredients
-        ]
-    if steps:
-        payload["steps"] = [
-            item.model_dump(mode="json", exclude_none=True, exclude_unset=True)
-            for item in steps
-        ]
-    return payload
-
-
-def has_ingredient_status_updates(items: list["IngredientPatchInput"] | None) -> bool:
-    return any(item.status is not None for item in (items or []))
-
-
-def has_step_status_updates(items: list["StepPatchInput"] | None) -> bool:
-    return any(item.status is not None for item in (items or []))
 
 
 TOOL_STATUS_LABELS = {
     "get_user_memory": "正在读取你的长期记忆...",
     "update_user_memory": "正在更新你的长期记忆...",
     "start_recommendation_task": "正在开启推荐任务...",
-    "recommend_recipes": "正在检索合适的菜谱候选...",
+    "search_recipes": "正在搜索菜谱库...",
+    "recommend_recipes": "正在推荐菜谱候选...",
     "create_or_update_task_recipe": "正在更新当前任务菜谱...",
+    "update_task_recipe_for_planning": "正在调整当前任务菜谱...",
     "show_recipe_detail_card": "正在整理菜谱详情卡片...",
     "recognize_image_ingredients": "正在识别图片中的食材...",
     "advance_to_preparation": "正在推进到备料阶段...",
@@ -88,97 +73,6 @@ TOOL_STATUS_LABELS = {
     "rollback_to_preparation": "正在回到备料阶段...",
     "cancel_cooking_task": "正在取消当前任务...",
 }
-
-
-class UserMemoryUpdateInput(BaseModel):
-    cooking_preference_text: str | None = None
-    tag_selections: TagSelections | None = None
-    complete_workspace_onboarding: bool | None = None
-
-
-class RecommendRecipesInput(BaseModel):
-    keyword: str | None = None
-    ingredients: list[str] = Field(default_factory=list)
-    flavor: list[str] = Field(default_factory=list)
-    method: list[str] = Field(default_factory=list)
-    scene: list[str] = Field(default_factory=list)
-    health: list[str] = Field(default_factory=list)
-    time: list[str] = Field(default_factory=list)
-    tool: list[str] = Field(default_factory=list)
-    difficulty: list[str] = Field(default_factory=list)
-
-
-class GeneratedRecipeIngredientInput(BaseModel):
-    ingredient_name: str
-    amount_text: str
-    amount_value: float | None = None
-    unit: str | None = None
-    is_optional: bool = False
-    purpose: str | None = None
-    sort_order: int | None = None
-
-
-class GeneratedRecipeStepInput(BaseModel):
-    step_no: int
-    title: str | None = None
-    instruction: str
-    timer_seconds: int | None = None
-    notes: str | None = None
-
-
-class GeneratedRecipeInput(BaseModel):
-    name: str
-    description: str = ""
-    difficulty: str = "简单"
-    estimated_minutes: int = 15
-    servings: int = 2
-    tags: dict[str, list[str]] = Field(default_factory=dict)
-    ingredients: list[GeneratedRecipeIngredientInput] = Field(default_factory=list)
-    steps: list[GeneratedRecipeStepInput] = Field(default_factory=list)
-    tips: str | None = None
-
-
-class TaskRecipeUpsertInput(BaseModel):
-    recipe_id: int | None = None
-    recipe: GeneratedRecipeInput | None = None
-
-
-class IngredientPatchInput(BaseModel):
-    id: str | None = None
-    ingredient_name: str | None = None
-    amount_text: str | None = None
-    amount_value: float | None = None
-    unit: str | None = None
-    is_optional: bool | None = None
-    purpose: str | None = None
-    sort_order: int | None = None
-    status: str | None = None
-    note: str | None = None
-
-
-class StepPatchInput(BaseModel):
-    id: str | None = None
-    step_no: int | None = None
-    title: str | None = None
-    instruction: str | None = None
-    timer_seconds: int | None = None
-    notes: str | None = None
-    status: str | None = None
-    note: str | None = None
-
-
-class TaskRecipePatchInput(BaseModel):
-    ingredients: list[IngredientPatchInput] = Field(default_factory=list)
-    steps: list[StepPatchInput] = Field(default_factory=list)
-
-
-class RecipeDetailDisplayInput(BaseModel):
-    recipe_id: int | None = None
-
-
-class ImageRecognitionInput(BaseModel):
-    image_url: str
-    user_hint: str | None = None
 
 
 def build_stage_tools(turn: AgentTurnContext) -> list[BaseTool]:
@@ -287,6 +181,87 @@ def build_stage_tools(turn: AgentTurnContext) -> list[BaseTool]:
         _log_tool_event("start_recommendation_task", f"task_id={task['id']}")
         return "已进入推荐中阶段。"
 
+    @tool("search_recipes", args_schema=RecipeSearchInput)
+    def search_recipes(
+        query: str | None = None,
+        ingredients: list[str] | None = None,
+        step_text: str | None = None,
+        flavor: list[str] | None = None,
+        method: list[str] | None = None,
+        scene: list[str] | None = None,
+        health: list[str] | None = None,
+        time: list[str] | None = None,
+        tool: list[str] | None = None,
+        difficulty: list[str] | None = None,
+        name_match_first: bool = True,
+        limit: int = 3,
+        *,
+        runtime: ToolRuntime,
+    ) -> str:
+        """
+        搜索数据库菜谱，不会生成新菜谱。
+
+        用户点名想吃或想做某一道菜时优先调用本工具，例如 query="西红柿炒鸡蛋"，
+        ingredients=["西红柿", "鸡蛋"]。工具会先按完整菜名匹配数据库，未命中时再按
+        食材、标签和步骤文本找相关候选；如果仍未找到，会明确返回“未收录”，此时不要现编菜谱。
+        """
+        current_turn = _ensure_recommendation_turn(runtime)
+        if not query and not ingredients and not step_text and not any([flavor, method, scene, health, time, tool, difficulty]):
+            raise ValueError(
+                "search_recipes 至少需要 query、ingredients、step_text 或标签之一。"
+                "用户指定菜名时请传 query=完整菜名原文；能拆出食材时同步传 ingredients。"
+            )
+        tag_filters = validate_recipe_tag_filters(
+            flavor=flavor,
+            method=method,
+            scene=scene,
+            health=health,
+            time=time,
+            tool=tool,
+            difficulty=difficulty,
+            allow_alias=True,
+        )
+        resolved_limit = max(1, min(int(limit or 3), 6))
+        _log_tool_event(
+            "search_recipes",
+            f"query={query!r}, ingredients={(ingredients or [])}, step_text={step_text!r}, "
+            f"name_match_first={name_match_first}, filters={tag_filters}",
+        )
+        entries = {entry.id: entry for entry in recipe_catalog_service.list_entries()}
+        candidate_scores, attempted, resolved_ingredients, candidate_sources = search_candidate_scores(
+            query=query,
+            ingredients=ingredients,
+            step_text=step_text,
+            tag_filters=tag_filters,
+            limit=resolved_limit,
+            name_match_first=name_match_first,
+        )
+        ranked_ids = rank_candidate_ids(entries, candidate_scores)
+        if not ranked_ids:
+            attempted_text = "；".join(attempted) if attempted else "未提供有效检索条件"
+            ingredient_text = f"；自动识别到的食材：{'、'.join(resolved_ingredients)}" if resolved_ingredients else ""
+            _log_tool_event("search_recipes", "no_candidates")
+            return (
+                f"数据库里暂时没有找到与「{query or '这些条件'}」匹配的菜谱。"
+                f"已尝试：{attempted_text}{ingredient_text}。"
+                "请不要编造菜谱内容；请直接告诉用户暂未收录，并询问是否需要你现写一份。"
+                "只有用户明确同意现写后，才可以调用 create_or_update_task_recipe 并传 recipe。"
+            )
+
+        chosen_ids = ranked_ids[:resolved_limit]
+        chosen_entries = [entries[item_id] for item_id in chosen_ids]
+        set_recipe_recommendation_card(current_turn, chosen_entries)
+        has_name_match = any("name" in candidate_sources.get(item_id, set()) for item_id in chosen_ids)
+        summary = [format_recipe_candidate(entry) for entry in chosen_entries]
+        _log_tool_event("search_recipes", f"selected_recipe_ids={chosen_ids}")
+        if has_name_match:
+            return "已在数据库中按菜名找到这些候选：\n" + "\n".join(summary)
+        fallback_text = "、".join(resolved_ingredients) if resolved_ingredients else "提供的条件"
+        return (
+            f"没有找到与「{query or fallback_text}」同名的数据库菜谱；"
+            f"已改按食材/标签/步骤文本找到这些相关候选：\n" + "\n".join(summary)
+        )
+
     @tool("recommend_recipes", args_schema=RecommendRecipesInput)
     def recommend_recipes(
         keyword: str | None = None,
@@ -301,7 +276,12 @@ def build_stage_tools(turn: AgentTurnContext) -> list[BaseTool]:
         *,
         runtime: ToolRuntime,
     ) -> str:
-        """根据关键词、食材和标签推荐菜谱候选，并自动展示推荐卡片。"""
+        """
+        根据食材、标签和开放偏好推荐数据库菜谱候选，并自动展示推荐卡片。
+
+        适合“推荐几道快手晚餐”“冰箱有鸡蛋和番茄能做什么”。如果用户点名
+        “我想吃西红柿炒鸡蛋”这类具体菜名，应优先调用 search_recipes。
+        """
         current_turn = _ensure_recommendation_turn(runtime)
         _log_tool_event(
             "recommend_recipes",
@@ -314,21 +294,20 @@ def build_stage_tools(turn: AgentTurnContext) -> list[BaseTool]:
         if keyword:
             for item in recipe_catalog_service.search_recipes_by_name(keyword, exact=False, limit=12)["candidates"]:
                 candidate_scores[item["id"]] = max(candidate_scores.get(item["id"], 0.0), item.get("score", 0.0))
-        if ingredients:
-            for item in recipe_catalog_service.find_recipes_by_ingredients(ingredients, exact_only=False, limit=12)["candidates"]:
+        resolved_ingredients = [item.strip() for item in (ingredients or []) if item and item.strip()]
+        if keyword and not resolved_ingredients and not candidate_scores:
+            resolved_ingredients = recipe_catalog_service.extract_ingredient_terms_from_text(keyword)
+        if resolved_ingredients:
+            for item in recipe_catalog_service.find_recipes_by_ingredients(resolved_ingredients, exact_only=False, limit=12)["candidates"]:
                 candidate_scores[item["id"]] = max(candidate_scores.get(item["id"], 0.0), item.get("score", 0.0))
-        raw_tag_filters = {
-            "flavor": flavor or [],
-            "method": method or [],
-            "scene": scene or [],
-            "health": health or [],
-            "time": time or [],
-            "tool": tool or [],
-            "difficulty": difficulty or [],
-        }
-        tag_filters = recipe_catalog_service.validate_tag_filters(
-            raw_tag_filters,
-            categories=raw_tag_filters.keys(),
+        tag_filters = validate_recipe_tag_filters(
+            flavor=flavor,
+            method=method,
+            scene=scene,
+            health=health,
+            time=time,
+            tool=tool,
+            difficulty=difficulty,
             allow_alias=False,
         )
         if any(tag_filters.values()):
@@ -336,14 +315,17 @@ def build_stage_tools(turn: AgentTurnContext) -> list[BaseTool]:
                 candidate_scores[item["id"]] = max(candidate_scores.get(item["id"], 0.0), item.get("score", 0.0))
 
         if not candidate_scores:
+            if keyword and not any(tag_filters.values()):
+                _log_tool_event("recommend_recipes", "keyword_no_candidates")
+                return (
+                    f"没有按关键词「{keyword}」推荐到合适的数据库菜谱。"
+                    "如果用户是在指定某一道菜，请改用 search_recipes(query=完整菜名, ingredients=可拆出的食材)；"
+                    "如果 search_recipes 也未找到，请告知用户暂未收录，并询问是否需要现写。"
+                )
             for item in recipe_catalog_service.default_recommendations(limit=12)["candidates"]:
                 candidate_scores[item["id"]] = item.get("score", 0.0)
 
-        ranked_ids = [
-            item_id
-            for item_id, _ in sorted(candidate_scores.items(), key=lambda pair: (-pair[1], pair[0]))
-            if item_id in entries
-        ]
+        ranked_ids = rank_candidate_ids(entries, candidate_scores)
         if not ranked_ids:
             raise ValueError("当前没有找到合适的菜谱候选。")
 
@@ -352,25 +334,8 @@ def build_stage_tools(turn: AgentTurnContext) -> list[BaseTool]:
         if len(chosen_ids) > 3:
             chosen_ids = chooser.sample(chosen_ids, k=3)
         chosen_entries = [entries[item_id] for item_id in chosen_ids[:3]]
-        current_turn.response_card_type = "recipe-recommendations"
-        current_turn.response_card = build_recipe_recommendations_card(
-            [
-                {
-                    "id": entry.id,
-                    "name": entry.name,
-                    "description": entry.description or "",
-                    "tags": flatten_recipe_tags(entry.tags)[:4],
-                    "difficulty": entry.difficulty,
-                    "estimated_minutes": entry.estimated_minutes,
-                    "servings": entry.servings,
-                }
-                for entry in chosen_entries
-            ]
-        ).model_dump(mode="json")
-        summary = [
-            f"{entry.id} - {entry.name}（{entry.estimated_minutes} 分钟，{entry.difficulty}，标签：{'/'.join(flatten_recipe_tags(entry.tags)[:4])}）"
-            for entry in chosen_entries
-        ]
+        set_recipe_recommendation_card(current_turn, chosen_entries)
+        summary = [format_recipe_candidate(entry) for entry in chosen_entries]
         _log_tool_event("recommend_recipes", f"selected_recipe_ids={chosen_ids[:3]}")
         return "已推荐这些候选：\n" + "\n".join(summary)
 
@@ -381,10 +346,23 @@ def build_stage_tools(turn: AgentTurnContext) -> list[BaseTool]:
         *,
         runtime: ToolRuntime,
     ) -> str:
-        """为当前任务创建或覆盖菜谱。可以通过 recipe_id 复制数据库菜谱，也可以直接提交一份完整新菜谱。"""
+        """
+        为当前任务创建或覆盖菜谱快照。
+
+        二选一使用：
+        1. 用户选择了数据库候选时，传 recipe_id，把该数据库菜谱复制为当前任务快照。
+        2. 用户明确同意“现写/新建”菜谱时，传完整 recipe。
+
+        不要在 search_recipes 未找到指定菜时直接调用 recipe 现编；必须先问用户是否需要现写。
+        """
         current_turn = _ensure_recommendation_turn(runtime)
         if recipe_id is None and recipe is None:
-            raise ValueError("必须提供 recipe_id 或 recipe。")
+            raise ValueError(
+                "create_or_update_task_recipe 必须提供 recipe_id 或 recipe 二选一。"
+                "复制数据库菜谱传 recipe_id；用户明确同意现写后才传完整 recipe。"
+            )
+        if recipe_id is not None and recipe is not None:
+            raise ValueError("recipe_id 和 recipe 不能同时提供。请选择复制数据库菜谱，或创建一份现写菜谱。")
         if recipe_id is not None:
             result = task_service.overwrite_recipe_from_catalog(
                 task_id=current_turn.current_task_id,
@@ -395,6 +373,8 @@ def build_stage_tools(turn: AgentTurnContext) -> list[BaseTool]:
             current_turn.response_recipe_name = result["recipe_snapshot"].name
             _log_tool_event("create_or_update_task_recipe", f"from_catalog recipe_id={recipe_id}")
             return f"已把数据库菜谱 #{recipe_id} 复制到当前任务中。"
+        if recipe is None or not recipe.ingredients or not recipe.steps:
+            raise ValueError("现写菜谱必须包含至少 1 项食材 ingredients 和至少 1 个步骤 steps。")
         result = task_service.overwrite_recipe_from_generated(
             task_id=current_turn.current_task_id,
             recipe_payload=recipe.model_dump(mode="json") if recipe else {},
@@ -404,6 +384,58 @@ def build_stage_tools(turn: AgentTurnContext) -> list[BaseTool]:
         current_turn.response_recipe_name = result["recipe_snapshot"].name
         _log_tool_event("create_or_update_task_recipe", f"generated recipe_name={result['recipe_snapshot'].name}")
         return f"已把当前任务菜谱更新为「{result['recipe_snapshot'].name}」。"
+
+    @tool("update_task_recipe_for_planning", args_schema=PlanningRecipePatchInput)
+    def update_task_recipe_for_planning(
+        ingredients: list[IngredientPatchInput] | None = None,
+        steps: list[StepPatchInput] | None = None,
+        name: str | None = None,
+        description: str | None = None,
+        difficulty: str | None = None,
+        estimated_minutes: int | None = None,
+        servings: int | None = None,
+        tags: dict[str, list[str]] | None = None,
+        tips: str | None = None,
+        *,
+        runtime: ToolRuntime,
+    ) -> str:
+        """
+        在推荐阶段局部修改当前任务菜谱快照。
+
+        用于用户已选定或已同意现写后的菜谱微调，例如调整份量、补一个食材、
+        改步骤措辞。它不会创建新任务，也不要作为搜索失败后的自动现编兜底。
+        """
+        current_turn = _require_task(runtime)
+        _ensure_stage(current_turn, ConversationStage.RECOMMENDING)
+        if current_turn.current_task_snapshot is None:
+            raise ValueError("当前任务还没有菜谱，无法局部更新。请先复制数据库菜谱，或在用户同意后现写一份。")
+        patch_payload = build_planning_patch_payload(
+            PlanningRecipePatchInput(
+                ingredients=ingredients or [],
+                steps=steps or [],
+                name=name,
+                description=description,
+                difficulty=difficulty,
+                estimated_minutes=estimated_minutes,
+                servings=servings,
+                tags=tags,
+                tips=tips,
+            )
+        )
+        if not patch_payload:
+            raise ValueError(
+                "没有可更新的推荐阶段菜谱字段。请传 name、servings、ingredients、steps、tips 等需要修改的字段。"
+            )
+        result = task_service.patch_recipe(
+            task_id=current_turn.current_task_id,
+            patch=patch_payload,
+            mode="planning",
+        )
+        current_turn.current_task_snapshot = result["recipe_snapshot"]
+        current_turn.current_task_source_recipe_id = result.get("source_recipe_id")
+        current_turn.response_recipe_name = result["recipe_snapshot"].name
+        _log_tool_event("update_task_recipe_for_planning", f"fields={sorted(patch_payload)}")
+        return f"已局部更新当前任务菜谱「{result['recipe_snapshot'].name}」。"
 
     @tool("show_recipe_detail_card", args_schema=RecipeDetailDisplayInput)
     def show_recipe_detail_card(recipe_id: int | None = None, *, runtime: ToolRuntime) -> str:
@@ -440,8 +472,9 @@ def build_stage_tools(turn: AgentTurnContext) -> list[BaseTool]:
         *,
         runtime: ToolRuntime,
     ) -> str:
-        """识别图片中的食材。请传入已经上传后的图片链接。"""
-        _ensure_recommendation_turn(runtime)
+        """识别图片中的食材。推荐阶段可用于找菜；备料阶段可辅助判断食材准备状态。"""
+        current_turn = _turn(runtime)
+        _ensure_stage(current_turn, ConversationStage.RECOMMENDING, ConversationStage.PREPARING)
         _log_tool_event("recognize_image_ingredients", f"image_url={image_url!r}, user_hint={user_hint!r}")
         result = vision_service.detect_ingredients_from_image_url(
             image_url=image_url,
@@ -486,7 +519,12 @@ def build_stage_tools(turn: AgentTurnContext) -> list[BaseTool]:
         *,
         runtime: ToolRuntime,
     ) -> str:
-        """在备料阶段更新任务菜谱，主要用于更新食材状态和步骤说明。"""
+        """
+        在备料阶段更新当前任务菜谱快照。
+
+        主要用于把食材标为 ready/pending/skipped 或补充食材备注。用 id 或
+        ingredient_name 定位食材；如果只是展示清单，请调用 show_pantry_card。
+        """
         current_turn = _require_task(runtime)
         _ensure_stage(current_turn, ConversationStage.PREPARING)
         patch_payload = build_task_patch_payload(
@@ -494,7 +532,10 @@ def build_stage_tools(turn: AgentTurnContext) -> list[BaseTool]:
             steps=steps,
         )
         if not patch_payload:
-            raise ValueError("没有可更新的备料字段。")
+            raise ValueError(
+                "没有可更新的备料字段。请传 ingredients 或 steps；"
+                "更新食材时至少提供 id 或 ingredient_name，并设置 status/note 等要修改的字段。"
+            )
         result = task_service.patch_recipe(
             task_id=current_turn.current_task_id,
             patch=patch_payload,
@@ -577,7 +618,12 @@ def build_stage_tools(turn: AgentTurnContext) -> list[BaseTool]:
         *,
         runtime: ToolRuntime,
     ) -> str:
-        """在烹饪阶段更新任务菜谱，只能用于步骤推进和步骤说明微调。"""
+        """
+        在烹饪阶段更新当前任务菜谱快照。
+
+        只能用于步骤推进、步骤备注或步骤说明微调。用 id 或 step_no 定位步骤；
+        status 只能是 pending/current/done。烹饪阶段不要修改食材。
+        """
         current_turn = _require_task(runtime)
         _ensure_stage(current_turn, ConversationStage.COOKING)
         patch_payload = build_task_patch_payload(
@@ -585,7 +631,10 @@ def build_stage_tools(turn: AgentTurnContext) -> list[BaseTool]:
             steps=steps,
         )
         if not patch_payload:
-            raise ValueError("没有可更新的烹饪字段。")
+            raise ValueError(
+                "没有可更新的烹饪字段。请传 steps；"
+                "更新步骤时至少提供 id 或 step_no，并设置 status/note/instruction 等要修改的字段。"
+            )
         result = task_service.patch_recipe(
             task_id=current_turn.current_task_id,
             patch=patch_payload,
@@ -664,23 +713,39 @@ def build_stage_tools(turn: AgentTurnContext) -> list[BaseTool]:
         return "当前任务已取消，并回到无任务阶段。"
 
     universal_tools: list[BaseTool] = [get_user_memory, update_user_memory]
-    workflow_tools = [
-        start_recommendation_task,
-        recommend_recipes,
-        create_or_update_task_recipe,
-        show_recipe_detail_card,
-        recognize_image_ingredients,
-        advance_to_preparation,
-        cancel_recommendation_task,
-        update_task_recipe_for_preparation,
-        show_pantry_card,
-        advance_to_cooking,
-        rollback_to_recommendation,
-        cancel_preparation_task,
-        update_task_recipe_for_cooking,
-        show_cooking_card,
-        complete_cooking_task,
-        rollback_to_preparation,
-        cancel_cooking_task,
-    ]
+    if turn.active_stage == ConversationStage.IDLE:
+        workflow_tools = [
+            start_recommendation_task,
+            search_recipes,
+            recommend_recipes,
+            create_or_update_task_recipe,
+        ]
+    elif turn.active_stage == ConversationStage.RECOMMENDING:
+        workflow_tools = [
+            search_recipes,
+            recommend_recipes,
+            create_or_update_task_recipe,
+            update_task_recipe_for_planning,
+            show_recipe_detail_card,
+            recognize_image_ingredients,
+            advance_to_preparation,
+            cancel_recommendation_task,
+        ]
+    elif turn.active_stage == ConversationStage.PREPARING:
+        workflow_tools = [
+            update_task_recipe_for_preparation,
+            show_pantry_card,
+            recognize_image_ingredients,
+            advance_to_cooking,
+            rollback_to_recommendation,
+            cancel_preparation_task,
+        ]
+    else:
+        workflow_tools = [
+            update_task_recipe_for_cooking,
+            show_cooking_card,
+            complete_cooking_task,
+            rollback_to_preparation,
+            cancel_cooking_task,
+        ]
     return universal_tools + workflow_tools

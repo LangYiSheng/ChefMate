@@ -15,6 +15,7 @@ import WorkspaceOnboardingModal from './components/WorkspaceOnboardingModal.vue'
 import { useVoiceInput } from './composables/useVoiceInput'
 import {
   createConversation,
+  deleteConversations,
   fetchConversation,
   fetchConversations,
   fetchProfile,
@@ -98,6 +99,10 @@ const loadedConversationIds = ref<Record<string, boolean>>({})
 const loadedRecipeIds = ref<Record<number, boolean>>({})
 const activeConversationId = ref('')
 const sidebarOpen = ref(false)
+const conversationManageMode = ref(false)
+const selectedConversationIds = ref<string[]>([])
+const bulkDeleteConfirmOpen = ref(false)
+const bulkDeleting = ref(false)
 const profilePanelOpen = ref(false)
 const workspaceOnboardingOpen = ref(false)
 const typingConversationId = ref<string | null>(null)
@@ -315,6 +320,7 @@ const isTyping = computed(
 )
 
 const isComposerDisabled = computed(() => isTyping.value || loadingWorkspace.value)
+const isBulkDeleteDisabled = computed(() => bulkDeleting.value || typingConversationId.value !== null)
 const activeTimerSlot = computed(() => {
   if (!activeConversationId.value) {
     return null
@@ -616,6 +622,116 @@ function closeSidebar() {
   sidebarOpen.value = false
 }
 
+function toggleConversationManageMode() {
+  conversationManageMode.value = !conversationManageMode.value
+  if (!conversationManageMode.value) {
+    selectedConversationIds.value = []
+  }
+}
+
+function toggleConversationSelection(conversationId: string) {
+  if (selectedConversationIds.value.includes(conversationId)) {
+    selectedConversationIds.value = selectedConversationIds.value.filter((id) => id !== conversationId)
+    return
+  }
+
+  selectedConversationIds.value = [...selectedConversationIds.value, conversationId]
+}
+
+function requestBulkDeleteConversations() {
+  if (!selectedConversationIds.value.length || isBulkDeleteDisabled.value) {
+    return
+  }
+
+  bulkDeleteConfirmOpen.value = true
+}
+
+function cancelBulkDeleteConversations() {
+  if (bulkDeleting.value) {
+    return
+  }
+
+  bulkDeleteConfirmOpen.value = false
+}
+
+function cleanupDeletedConversationState(deletedIds: string[]) {
+  const deletedIdSet = new Set(deletedIds)
+
+  deletedIds.forEach((conversationId) => {
+    delete conversationTimers.value[conversationId]
+  })
+
+  const nextLoadedConversationIds = { ...loadedConversationIds.value }
+  const nextConversationClientCardState = { ...conversationClientCardState.value }
+  deletedIds.forEach((conversationId) => {
+    delete nextLoadedConversationIds[conversationId]
+    delete nextConversationClientCardState[conversationId]
+  })
+  loadedConversationIds.value = nextLoadedConversationIds
+  conversationClientCardState.value = nextConversationClientCardState
+
+  if (timerNotice.value && deletedIdSet.has(timerNotice.value.conversationId)) {
+    clearTimerNoticeTimeout()
+    timerNotice.value = null
+  }
+
+  if (typingConversationId.value && deletedIdSet.has(typingConversationId.value)) {
+    typingConversationId.value = null
+    streamingStatusText.value = ''
+  }
+
+  stopCountdownTickerIfIdle()
+}
+
+async function confirmBulkDeleteConversations() {
+  if (!selectedConversationIds.value.length || bulkDeleting.value) {
+    return
+  }
+
+  const token = getAuthToken()
+  if (!token) {
+    return
+  }
+
+  const conversationIds = [...selectedConversationIds.value]
+  bulkDeleting.value = true
+  try {
+    const result = await deleteConversations(token, conversationIds)
+    const deletedIdSet = new Set(result.deletedIds)
+    const activeConversationWasDeleted =
+      activeConversationId.value !== '' && deletedIdSet.has(activeConversationId.value)
+
+    conversations.value = conversations.value.filter(
+      (conversation) => !deletedIdSet.has(conversation.id),
+    )
+    cleanupDeletedConversationState(result.deletedIds)
+
+    if (activeConversationWasDeleted) {
+      pendingTimerReplacement.value = null
+    }
+
+    selectedConversationIds.value = selectedConversationIds.value.filter((id) => !deletedIdSet.has(id))
+    bulkDeleteConfirmOpen.value = false
+
+    if (result.deletedIds.length) {
+      conversationManageMode.value = false
+      selectedConversationIds.value = []
+    }
+
+    if (activeConversationWasDeleted) {
+      const nextConversationId = conversations.value[0]?.id ?? ''
+      activeConversationId.value = nextConversationId
+      if (nextConversationId) {
+        await router.replace({ name: 'chat', params: { conversationId: nextConversationId } })
+      } else {
+        await router.replace({ name: 'chat', params: { conversationId: draftConversationId } })
+      }
+    }
+  } finally {
+    bulkDeleting.value = false
+  }
+}
+
 async function refreshProfilePanelData() {
   const token = getAuthToken()
   if (!token) {
@@ -748,6 +864,10 @@ async function logout() {
   loadedConversationIds.value = {}
   loadedRecipeIds.value = {}
   workspaceInitialized.value = false
+  conversationManageMode.value = false
+  selectedConversationIds.value = []
+  bulkDeleteConfirmOpen.value = false
+  bulkDeleting.value = false
   conversationTimers.value = {}
   conversationClientCardState.value = {}
   pendingTimerReplacement.value = null
@@ -759,6 +879,8 @@ async function logout() {
 }
 
 function selectConversation(conversationId: string) {
+  conversationManageMode.value = false
+  selectedConversationIds.value = []
   activeConversationId.value = conversationId
   void router.push({ name: 'chat', params: { conversationId } })
   closeSidebar()
@@ -773,6 +895,8 @@ function selectShortcut(shortcutId: string) {
 }
 
 function startNewConversation() {
+  conversationManageMode.value = false
+  selectedConversationIds.value = []
   activeConversationId.value = ''
   void router.push({ name: 'chat', params: { conversationId: draftConversationId } })
   closeSidebar()
@@ -1279,14 +1403,20 @@ function showRecipeLibrary() {
         :conversations="conversations"
         :conversation-timers="conversationTimers"
         :active-conversation-id="activeConversationId"
+        :bulk-delete-disabled="isBulkDeleteDisabled"
+        :is-managing-conversations="conversationManageMode"
         :is-open="sidebarOpen"
+        :selected-conversation-ids="selectedConversationIds"
         :shortcuts="sidebarShortcuts"
         :user-profile="profile"
         @close="closeSidebar"
         @new-conversation="startNewConversation"
         @open-profile="openProfilePanel"
+        @request-bulk-delete="requestBulkDeleteConversations"
         @select-conversation="selectConversation"
         @select-shortcut="selectShortcut"
+        @toggle-conversation-manage-mode="toggleConversationManageMode"
+        @toggle-conversation-selection="toggleConversationSelection"
       />
 
       <main class="workspace">
@@ -1409,6 +1539,16 @@ function showRecipeLibrary() {
           @save-profile="saveProfileSettings"
         />
       </OverlayDialog>
+
+      <ActionModal
+        :is-open="bulkDeleteConfirmOpen"
+        title="删除选中的对话？"
+        :message="`将永久删除 ${selectedConversationIds.length} 段对话，并取消其中正在运行的计时器。`"
+        :confirm-label="bulkDeleting ? '删除中...' : '删除'"
+        cancel-label="再想想"
+        @cancel="cancelBulkDeleteConversations"
+        @confirm="confirmBulkDeleteConversations"
+      />
 
       <ActionModal
         :is-open="pendingTimerReplacement !== null"

@@ -56,10 +56,17 @@ class RecipeCatalogService:
     INGREDIENT_ALIASES = {
         "西红柿": "番茄",
         "番茄": "番茄",
+        "蛋": "鸡蛋",
+        "鸡蛋": "鸡蛋",
         "鸡翅": "鸡翅中",
         "鸡翅中": "鸡翅中",
         "米饭": "米饭",
         "剩饭": "米饭",
+    }
+
+    TEXT_ALIASES = {
+        "西红柿": "番茄",
+        "鸡蛋": "蛋",
     }
 
     def list_entries(self) -> list[RecipeCatalogEntry]:
@@ -356,6 +363,91 @@ class RecipeCatalogService:
             "candidates": candidates[:limit],
         }
 
+    def search_recipes_by_step_text(self, query: str, limit: int = 10) -> dict[str, Any]:
+        normalized_query = self._normalize_text(query)
+        if not normalized_query:
+            return {"query": query, "match_mode": "step_text", "candidates": []}
+
+        candidates: list[dict[str, Any]] = []
+        for entry in self.list_entries():
+            best_score = 0.0
+            matched_steps: list[dict[str, Any]] = []
+
+            for step in entry.steps:
+                step_text = " ".join(
+                    item
+                    for item in [step.title or "", step.instruction or "", step.notes or ""]
+                    if item
+                )
+                normalized_step_text = self._normalize_text(step_text)
+                if not normalized_step_text:
+                    continue
+                if normalized_query in normalized_step_text:
+                    score = 0.95
+                else:
+                    score = difflib.SequenceMatcher(a=normalized_query, b=normalized_step_text).ratio()
+                if score < 0.35:
+                    continue
+                best_score = max(best_score, score)
+                matched_steps.append(
+                    {
+                        "step_no": step.step_no,
+                        "title": step.title,
+                        "score": round(score, 4),
+                    }
+                )
+
+            if best_score <= 0:
+                continue
+
+            candidates.append(
+                {
+                    "id": entry.id,
+                    "name": entry.name,
+                    "description": entry.description,
+                    "difficulty": entry.difficulty,
+                    "estimated_minutes": entry.estimated_minutes,
+                    "score": round(best_score, 4),
+                    "matched_steps": sorted(matched_steps, key=lambda item: (-item["score"], item["step_no"]))[:3],
+                }
+            )
+
+        candidates.sort(key=lambda item: (-item["score"], item["estimated_minutes"], item["id"]))
+        return {
+            "query": query,
+            "match_mode": "step_text",
+            "candidates": candidates[:limit],
+        }
+
+    def extract_ingredient_terms_from_text(self, text: str, *, limit: int = 8) -> list[str]:
+        normalized_text = self._normalize_text(text)
+        if not normalized_text:
+            return []
+
+        known_terms: set[str] = set(self.INGREDIENT_ALIASES)
+        for entry in self.list_entries():
+            known_terms.update(
+                item.ingredient_name.strip()
+                for item in entry.ingredients
+                if item.ingredient_name and item.ingredient_name.strip()
+            )
+
+        matches: list[tuple[int, int, str]] = []
+        seen: set[str] = set()
+        for raw_term in known_terms:
+            canonical = self.INGREDIENT_ALIASES.get(raw_term, raw_term).strip()
+            normalized_term = self._normalize_ingredient_name(raw_term)
+            if not canonical or not normalized_term:
+                continue
+            index = normalized_text.find(normalized_term)
+            if index < 0 or canonical in seen:
+                continue
+            matches.append((index, -len(normalized_term), canonical))
+            seen.add(canonical)
+
+        matches.sort()
+        return [item[2] for item in matches[:limit]]
+
     def infer_tag_filters_from_text(self, user_input: str) -> dict[str, list[str]]:
         normalized = self._normalize_text(user_input)
         taxonomy = recipe_repository.get_tag_taxonomy()
@@ -528,7 +620,7 @@ class RecipeCatalogService:
         return best_score if best_score >= 0.55 else 0.0
 
     def _normalize_text(self, value: str) -> str:
-        return (
+        normalized = (
             value.strip()
             .lower()
             .replace(" ", "")
@@ -536,6 +628,9 @@ class RecipeCatalogService:
             .replace("-", "")
             .replace("_", "")
         )
+        for source, target in self.TEXT_ALIASES.items():
+            normalized = normalized.replace(source, target)
+        return normalized
 
     def _normalize_ingredient_name(self, value: str) -> str:
         canonical = self.INGREDIENT_ALIASES.get(value.strip(), value.strip())

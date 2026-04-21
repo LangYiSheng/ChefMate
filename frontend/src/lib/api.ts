@@ -406,6 +406,20 @@ export async function createConversation(
   return normalizeConversation(response.conversation)
 }
 
+export async function deleteConversations(token: string, conversationIds: string[]) {
+  const response = await apiFetch<any>('/conversations', {
+    method: 'DELETE',
+    token,
+    body: JSON.stringify({
+      conversation_ids: conversationIds,
+    }),
+  })
+  return {
+    deletedIds: Array.isArray(response.deleted_ids) ? response.deleted_ids.map(String) : [],
+    deletedCount: Number(response.deleted_count || 0),
+  }
+}
+
 export async function fetchRecipes(
   token: string,
   params: {

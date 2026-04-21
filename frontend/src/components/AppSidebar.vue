@@ -8,19 +8,25 @@ import type {
 
 const props = defineProps<{
   activeConversationId: string
+  bulkDeleteDisabled: boolean
   conversations: ConversationRecord[]
   conversationTimers: Record<string, ConversationTimerSlot>
+  isManagingConversations: boolean
   isOpen: boolean
+  selectedConversationIds: string[]
   shortcuts: NavShortcut[]
   userProfile: UserProfileSummary
 }>()
 
 const emit = defineEmits<{
+  requestBulkDelete: []
   close: []
   newConversation: []
   openProfile: []
   selectConversation: [conversationId: string]
   selectShortcut: [shortcutId: string]
+  toggleConversationManageMode: []
+  toggleConversationSelection: [conversationId: string]
 }>()
 
 const stageLabelMap: Record<ConversationRecord['stage'], string> = {
@@ -53,6 +59,19 @@ function conversationMeta(conversation: ConversationRecord) {
   }
 
   return stageLabel
+}
+
+function isConversationSelected(conversationId: string) {
+  return props.selectedConversationIds.includes(conversationId)
+}
+
+function handleConversationClick(conversationId: string) {
+  if (props.isManagingConversations) {
+    emit('toggleConversationSelection', conversationId)
+    return
+  }
+
+  emit('selectConversation', conversationId)
 }
 </script>
 
@@ -98,6 +117,14 @@ function conversationMeta(conversation: ConversationRecord) {
       <section class="conversation-section">
         <div class="section-header">
           <h2>对话列表</h2>
+          <button
+            v-if="conversations.length"
+            class="section-action"
+            type="button"
+            @click="emit('toggleConversationManageMode')"
+          >
+            {{ isManagingConversations ? '完成' : '管理' }}
+          </button>
         </div>
 
         <div class="conversation-list hover-scroll">
@@ -105,12 +132,37 @@ function conversationMeta(conversation: ConversationRecord) {
             v-for="conversation in conversations"
             :key="conversation.id"
             class="conversation-item"
-            :class="{ active: conversation.id === activeConversationId }"
+            :class="{
+              active: conversation.id === activeConversationId,
+              selected: isConversationSelected(conversation.id),
+              'is-managing': isManagingConversations,
+            }"
             type="button"
-            @click="emit('selectConversation', conversation.id)"
+            @click="handleConversationClick(conversation.id)"
           >
-            <strong>{{ conversationHeadline(conversation) }}</strong>
-            <small>{{ conversationMeta(conversation) }}</small>
+            <span
+              v-if="isManagingConversations"
+              class="conversation-checkbox"
+              :class="{ checked: isConversationSelected(conversation.id) }"
+              aria-hidden="true"
+            >
+              <span></span>
+            </span>
+            <span class="conversation-copy">
+              <strong>{{ conversationHeadline(conversation) }}</strong>
+              <small>{{ conversationMeta(conversation) }}</small>
+            </span>
+          </button>
+        </div>
+
+        <div v-if="isManagingConversations" class="bulk-delete-bar">
+          <span>已选 {{ selectedConversationIds.length }} 个</span>
+          <button
+            type="button"
+            :disabled="!selectedConversationIds.length || bulkDeleteDisabled"
+            @click="emit('requestBulkDelete')"
+          >
+            删除
           </button>
         </div>
       </section>
@@ -247,6 +299,16 @@ function conversationMeta(conversation: ConversationRecord) {
   font-size: 0.98rem;
 }
 
+.section-action {
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(47, 93, 80, 0.08);
+  color: var(--color-accent);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .shortcut-item,
 .conversation-item {
   width: 100%;
@@ -285,7 +347,14 @@ function conversationMeta(conversation: ConversationRecord) {
 }
 
 .conversation-item {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
   background: rgba(255, 255, 255, 0.42);
+}
+
+.conversation-item.is-managing {
+  padding-left: 0.8rem;
 }
 
 .conversation-item.active {
@@ -295,10 +364,47 @@ function conversationMeta(conversation: ConversationRecord) {
     rgba(255, 255, 255, 0.42);
 }
 
+.conversation-item.selected {
+  border-color: rgba(229, 143, 91, 0.34);
+  background: rgba(255, 247, 235, 0.86);
+}
+
 .conversation-item:hover,
 .shortcut-item:hover {
   transform: translateY(-1px);
   border-color: rgba(47, 93, 80, 0.18);
+}
+
+.conversation-checkbox {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  border: 1px solid rgba(47, 93, 80, 0.28);
+  border-radius: 0.35rem;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.conversation-checkbox span {
+  width: 0.52rem;
+  height: 0.52rem;
+  border-radius: 0.18rem;
+  background: transparent;
+  transition: background 160ms ease;
+}
+
+.conversation-checkbox.checked {
+  border-color: rgba(47, 93, 80, 0.68);
+}
+
+.conversation-checkbox.checked span {
+  background: var(--color-accent);
+}
+
+.conversation-copy {
+  min-width: 0;
 }
 
 .conversation-item small {
@@ -307,6 +413,33 @@ function conversationMeta(conversation: ConversationRecord) {
   color: var(--color-accent);
   font-size: 0.8rem;
   line-height: 1.45;
+}
+
+.bulk-delete-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.8rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid rgba(47, 93, 80, 0.1);
+  color: var(--color-text-soft);
+  font-size: 0.86rem;
+}
+
+.bulk-delete-bar button {
+  min-width: 4.5rem;
+  padding: 0.55rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(166, 61, 49, 0.1);
+  color: #a63d31;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bulk-delete-bar button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
 }
 
 .profile-card {

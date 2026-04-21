@@ -4,6 +4,7 @@ import json
 from typing import Any
 from uuid import uuid4
 
+from sqlalchemy import bindparam
 from sqlalchemy import text
 
 from app.db.connection import engine
@@ -135,6 +136,48 @@ class ConversationRepository:
         )
         with engine.begin() as conn:
             conn.execute(query, params)
+
+    def delete_conversations(self, *, user_id: int, conversation_ids: list[str]) -> list[str]:
+        if not conversation_ids:
+            return []
+
+        select_query = text(
+            """
+            SELECT id
+            FROM conversation
+            WHERE user_id = :user_id
+              AND id IN :conversation_ids
+            """
+        ).bindparams(bindparam("conversation_ids", expanding=True))
+        delete_query = text(
+            """
+            DELETE FROM conversation
+            WHERE user_id = :user_id
+              AND id IN :conversation_ids
+            """
+        ).bindparams(bindparam("conversation_ids", expanding=True))
+
+        with engine.begin() as conn:
+            rows = conn.execute(
+                select_query,
+                {
+                    "user_id": user_id,
+                    "conversation_ids": conversation_ids,
+                },
+            ).mappings().all()
+            deleted_id_set = {str(row["id"]) for row in rows}
+            if not deleted_id_set:
+                return []
+
+            conn.execute(
+                delete_query,
+                {
+                    "user_id": user_id,
+                    "conversation_ids": list(deleted_id_set),
+                },
+            )
+
+        return [conversation_id for conversation_id in conversation_ids if conversation_id in deleted_id_set]
 
     def create_task(
         self,

@@ -83,7 +83,8 @@ def build_task_recipe_snapshot_from_catalog(lookup: Any) -> TaskRecipeSnapshot:
 
 
 def build_task_recipe_snapshot_from_generated(recipe_payload: dict[str, Any]) -> TaskRecipeSnapshot:
-    snapshot = TaskRecipeSnapshot(**recipe_payload)
+    payload = _sanitize_generated_recipe_payload(recipe_payload)
+    snapshot = TaskRecipeSnapshot(**payload)
     if snapshot.source_type != TaskRecipeSourceType.GENERATED:
         snapshot.source_type = TaskRecipeSourceType.GENERATED
     snapshot.ingredients = [
@@ -110,6 +111,37 @@ def build_task_recipe_snapshot_from_generated(recipe_payload: dict[str, Any]) ->
     normalize_snapshot_defaults(snapshot)
     normalize_step_progress(snapshot)
     return snapshot
+
+
+def _sanitize_generated_recipe_payload(raw: dict[str, Any]) -> dict[str, Any]:
+    payload = dict(raw)
+
+    ingredients: list[dict[str, Any]] = []
+    for index, item in enumerate(payload.get("ingredients") or []):
+        if not isinstance(item, dict):
+            continue
+        next_item = dict(item)
+        next_item["id"] = next_item.get("id") or f"ingredient-{index + 1}"
+        next_item["sort_order"] = next_item.get("sort_order") if next_item.get("sort_order") is not None else index
+        next_item["status"] = normalize_ingredient_status(next_item.get("status"))
+        next_item["amount_text"] = next_item.get("amount_text") or "适量"
+        ingredients.append(next_item)
+    payload["ingredients"] = ingredients
+
+    steps: list[dict[str, Any]] = []
+    for index, item in enumerate(payload.get("steps") or []):
+        if not isinstance(item, dict):
+            continue
+        next_item = dict(item)
+        step_no = next_item.get("step_no") or index + 1
+        next_item["step_no"] = int(step_no)
+        next_item["id"] = next_item.get("id") or f"step-{step_no}"
+        next_item["status"] = normalize_step_status(
+            next_item.get("status") or (StepStatus.CURRENT if index == 0 else StepStatus.PENDING)
+        )
+        steps.append(next_item)
+    payload["steps"] = steps
+    return payload
 
 
 def load_task_recipe_snapshot(raw: str | dict[str, Any] | None) -> TaskRecipeSnapshot | None:
